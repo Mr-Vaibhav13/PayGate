@@ -4,7 +4,7 @@ const express = require('express');
 const QRCode = require('qrcode');
 const cors = require('cors');
 const app = express();
-const port = process.env.BACKEND_PORT;
+const port = process.env.BACKEND_PORT || 3001;
 const { connectDB, UserModel } = require('./db');
 
 const jwt = require('jsonwebtoken');
@@ -14,7 +14,11 @@ app.use(express.json());
 
 
 app.use(express.static('public'));
-app.use(cors());
+app.use(cors({
+  origin: ["https://payment-gateway-orpin-iota.vercel.app/"],
+  methods:["POST", "GET"],
+  credentials: true
+}));  
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
