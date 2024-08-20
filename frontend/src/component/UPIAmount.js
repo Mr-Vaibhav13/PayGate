@@ -1,18 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 
 const UPIAmount = () => {
     const [amount, setAmount] = useState('');
     const [paymentLink, setPaymentLink] = useState('');
-    const [copySuccess, setCopySuccess] = useState('');
+    const [copySuccess, setCopySuccess] = useState('')
+    const [upiId, setUpiId] = useState('');
 
+
+    const fetchUpiId = async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-upi-id`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // Assuming you use JWT for authentication
+                }
+            });
+            const data = await response.json();
+            setUpiId(data.upiId);
+            localStorage.setItem('vpa', data.upiId);
+        } catch (error) {
+            console.error('Error fetching UPI ID:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchUpiId(); // Fetch UPI ID when the component mounts
+    }, []);
+    
 
     const generatePaymentLink = async () => {
+        if (!upiId) {
+            alert('UPI ID not available');
+            return;
+        }
         try {
-            const response = await fetch(`http://localhost:3001/api/upi-qr?amount=${encodeURIComponent(amount)}&vpa=yourVPA@upi`);
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upi-qr?amount=${encodeURIComponent(amount)}&vpa=${encodeURIComponent(upiId)}`);
             const data = await response.json();
             setPaymentLink(`${window.location.origin}/gate?upiLink=${encodeURIComponent(data.upiLink)}`);
-            localStorage.setItem("amount", amount);
+            localStorage.setItem('amount', amount);
         } catch (error) {
             console.error('Error generating payment link:', error);
         }
@@ -24,10 +48,16 @@ const UPIAmount = () => {
             setCopySuccess('Link copied!');
         })
     };
+
+
+    const handleLogout = () => {
+         // Remove JWT token from local storage
+        window.location.href = '/login'; // Redirect to login page or home page
+    };
    
     
-    localStorage.setItem("amount", amount)
-    localStorage.setItem("vpa", "vai@upi")
+    // localStorage.setItem("amount", amount)
+    // localStorage.setItem("vpa", "vaib@upi")
 
     return (
         <div className='flex-col p-2'>
@@ -70,6 +100,9 @@ const UPIAmount = () => {
                 </div>
             )}
 
+        <button onClick={handleLogout}>Logout</button>
+
+        
         </div>
     );
 };

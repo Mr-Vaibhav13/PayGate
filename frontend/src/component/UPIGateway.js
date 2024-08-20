@@ -19,7 +19,7 @@ const UPIGateway = () => {
     
     const fetchQrCode = async () => {
         try {
-            const response = await fetch(`http://localhost:3001/api/upi-qr?amount=${encodeURIComponent(amount)}&vpa=${encodeURIComponent(vpa)}`);
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upi-qr?amount=${encodeURIComponent(amount)}&vpa=${encodeURIComponent(vpa)}`);
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
