@@ -14,11 +14,7 @@ app.use(express.json());
 
 
 app.use(express.static('public'));
-app.use(cors({
-  origin: ["https://payment-gateway-orpin-iota.vercel.app/"],
-  methods:["POST", "GET"],
-  credentials: true
-}));  
+app.use(cors());  
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
