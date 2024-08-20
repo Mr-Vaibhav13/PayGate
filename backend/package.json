@@ -48,9 +48,5 @@
   "devDependencies": {
     "tailwindcss": "^3.4.10"
   },
-  "main": "server.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "description": ""
 }
