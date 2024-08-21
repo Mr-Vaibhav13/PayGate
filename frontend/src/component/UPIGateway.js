@@ -1,59 +1,113 @@
-import React, { useEffect, useState } from 'react'
-import gpay from "../images/googlePay.png"
-import phonePe from "../images/phonepeIcon.png"
-import bhim from '../images/bhimIcon.png'
-import paytm from '../images/paytmIcon.png'
-import apay from '../images/amazonPayIcon.png'
-import upi from "../images/upiIcon.png"
+import React, { useEffect, useState } from 'react';
+import gpay from "../images/googlePay.png";
+import phonePe from "../images/phonepeIcon.png";
+import bhim from '../images/bhimIcon.png';
+import paytm from '../images/paytmIcon.png';
+import apay from '../images/amazonPayIcon.png';
+import upi from "../images/upiIcon.png";
+import { useNavigate } from 'react-router-dom';
+
 
 const UPIGateway = () => {
-
-
-    const amount = localStorage.getItem("amount")
-    const vpa = localStorage.getItem("vpa")
     
+    const amount = localStorage.getItem("amount");
+    const vpa = localStorage.getItem("vpa");
+
     const [qrCodeUrl, setQrCodeUrl] = useState('');
+    const [upiId, setUpiId] = useState('');
     const [isMobile, setIsMobile] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(300); 
+    const [timeLeft, setTimeLeft] = useState(300);
+    const [payments, setPayments] = useState([]);
+    const [transactionId, setTransactionId] = useState('');
+    const [paymentStatus, setPaymentStatus] = useState('pending')
 
-    
+    const navigate = useNavigate(); // React Router navigate function
+
+
+    // const fetchQrCode = async () => {
+    //     try {
+    //         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upi-qr?amount=${encodeURIComponent(amount)}`);
+    //         if (!response.ok) {
+    //             throw new Error('Network response was not ok');
+    //         }
+    //         const data = await response.json();
+    //         setQrCodeUrl(data.qrCodeUrl);
+    //         setUpiId(data.upiId);
+
+    //         // Store amount and QR code in the database
+    //         await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/store-payment-info`, {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify({
+    //                 amount,
+    //                 qrCodeUrl: data.qrCodeUrl,
+    //             }),
+    //         });
+    //     } catch (error) {
+    //         console.error('Error fetching QR code:', error);
+    //     }
+    // };
+
     const fetchQrCode = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upi-qr?amount=${encodeURIComponent(amount)}&vpa=${encodeURIComponent(vpa)}`);
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upi-qr?amount=${encodeURIComponent(amount)}`);
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
             setQrCodeUrl(data.qrCodeUrl);
+            setUpiId(data.upiId);
+            setTransactionId(data.transactionId); // Store transactionId
+
+            // Store amount and QR code in the database
+            await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/store-payment-info`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    amount,
+                    qrCodeUrl: data.qrCodeUrl,
+                    transactionId: data.transactionId, // Store transactionId
+                }),
+            });
         } catch (error) {
             console.error('Error fetching QR code:', error);
         }
     };
-    
-    
+
+    const fetchPayments = async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/used-upi-ids`);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            setPayments(data);
+        } catch (error) {
+            console.error('Error fetching payments:', error);
+        }
+    };
+
     useEffect(() => {
-       
         if (amount && vpa) {
             fetchQrCode();
         }
-    
-        
+
         const intervalId = setInterval(() => {
             if (amount && vpa) {
                 fetchQrCode();
             }
         }, 300000);
-    
-        return () => clearInterval(intervalId); 
+
+        return () => clearInterval(intervalId);
     }, [amount, vpa]);
 
-
-
     useEffect(() => {
-        
         const checkIfMobile = () => {
             const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-            
             if (/android/i.test(userAgent) || /iPad|iPhone|iPod/.test(userAgent)) {
                 setIsMobile(true);
             } else {
@@ -67,19 +121,44 @@ const UPIGateway = () => {
             setTimeLeft(prevTime => {
                 if (prevTime <= 1) {
                     fetchQrCode();
-                    return 300; 
+                    return 300;
                 }
                 return prevTime - 1;
             });
         }, 1000);
 
         return () => clearInterval(intervalId);
+    }, []);
 
-        }, []);
+    useEffect(() => {
+        fetchPayments();
+    }, []);
+
+
+    // new
+    // useEffect(() => {
+    //     if (transactionId) {
+    //         const intervalId = setInterval(async () => {
+    //             try {
+    //                 const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/check-payment-status?transactionId=${transactionId}`);
+    //                 const data = await response.json();
+    //                 if (data.status === 'completed') {
+    //                     setPaymentStatus('completed');
+    //                     clearInterval(intervalId); // Stop polling after payment is completed
+    //                     navigate('/payment-success'); // Redirect after payment is completed
+    //                 }
+    //             } catch (error) {
+    //                 console.error('Error checking payment status:', error);
+    //             }
+    //         }, 5000); // Check every 5 seconds
+
+    //         return () => clearInterval(intervalId);
+    //     }
+    // }, [transactionId, navigate]);
+
 
 
     const handleApps = () => {
-        
         const upiLink = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=Merchant%20Name&tr=${Date.now()}&tn=Payment%20for%20Order&am=${encodeURIComponent(amount)}&cu=INR`;
         window.location.href = upiLink;
     };
@@ -90,34 +169,28 @@ const UPIGateway = () => {
         return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
-    
+    return (
+        <div className='border-2 border-black h-[630px] rounded-md mt-10 w-96 m-auto'>
+            <div className='h-[150px] border-b-2 bg-blue-700 border-gray-400'>
+                <p className='text-center p-5 text-white font-semibold'>UPI gateway</p>
+                <p className='text-center pt-5 text-lg font-bold text-white'>ReduxPay</p>
+            </div>
 
+            <div className='text-center m-4 text-4xl font-bold'>₹ {amount}</div>
 
-  return (
-    <div className='border-2 border-black h-[630px] rounded-md mt-10 
-    w-96 m-auto'>
-
-        <div className='h-[150px] border-b-2 bg-blue-700 border-gray-400'>
-        <p className='text-center p-5 text-white font-semibold'>UPI gateway</p>
-        <p className='text-center pt-5 text-lg font-bold text-white'>ReduxPay </p>
-        </div>
-
-        <div className='text-center m-4 text-4xl font-bold'>₹ {amount}</div>
-
-        <div>
-            {qrCodeUrl && !isMobile && (
-                <div className='mt-6 flex-col flex items-center justify-center'>
-                    <div className='text-center mt-1'>
-                        <p className='text-lg font-semibold'>QR Reset Time: {formatTime(timeLeft)}</p>
+            <div>
+                {qrCodeUrl && !isMobile && (
+                    <div className='mt-6 flex-col flex items-center justify-center'>
+                        <div className='text-center mt-1'>
+                            <p className='text-lg font-semibold'>QR Reset Time: {formatTime(timeLeft)}</p>
+                        </div>
+                        <p className='text-xs font-semibold'>Scan QR to pay</p>
+                        <img className='h-64' src={qrCodeUrl} alt="UPI QR Code" />
+                        {upiId && <p className='text-lg font-semibold'>UPI ID: {upiId}</p>} {/* Display UPI ID */}
                     </div>
-                    <p className='text-xs font-semibold'>Scan QR to pay</p>
-                    <img className='h-64' src={qrCodeUrl} alt="UPI QR Code" />
-                    
-                    
-                </div>
-            )}
+                )}
 
-            {
+{
             !isMobile ? 
             <div className='flex items-center justify-center space-x-5'>
 
@@ -180,10 +253,9 @@ const UPIGateway = () => {
             </div>
             }
 
+            </div>
         </div>
+    );
+};
 
-    </div>
-  )
-}
-
-export default UPIGateway
+export default UPIGateway;

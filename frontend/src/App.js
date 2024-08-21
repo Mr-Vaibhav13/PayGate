@@ -4,12 +4,14 @@ import UPIAmount from "./component/UPIAmount";
 import UPIGateway from "./component/UPIGateway";
 import Login from './component/Login';
 import Signup from './component/Signup';
-import Navbar from './component/Navbar'; // Import the Navbar component
+import Navbar from './component/Navbar'; 
+import AdminPage from './component/admin/AdminPage';
+import AdminRoute from './component/admin/AdminRoute';
+import Transactions from './component/Transactions';
 
 const App = () => {
   const location = useLocation();
 
-  
   const showNavbar = location.pathname === '/' || location.pathname === '/login';
 
   return (
@@ -20,6 +22,14 @@ const App = () => {
         <Route path="/" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/gate" element={<UPIGateway />} />
+        <Route path="/trans" element={<Transactions />} />
+      
+        <Route path="/admin" element={
+          <AdminRoute>
+            <AdminPage />
+          </AdminRoute>
+        } />
+
       </Routes>
     </div>
   );
