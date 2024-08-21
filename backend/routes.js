@@ -5,10 +5,10 @@ const router = express.Router();
 const QRCode = require('qrcode');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { UserModel } = require('./db');
-const UPIModel = require('./upiDB');
-const { UsedUpiId } = require('./usedUpiDB');
-const Payment = require("./paymentDB")
+const { UserModel } = require('./databases/db');
+const UPIModel = require('./databases/upiDB');
+const { UsedUpiId } = require('./databases/usedUpiDB');
+const Payment = require("./databases/paymentDB")
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -285,6 +285,7 @@ router.get('/trans', async (req, res) => {
 
 //     res.json({ message: 'Payment status updated' });
 // });
+
 
 // // Endpoint to check payment status
 // router.get('/api/check-payment-status', async (req, res) => {
