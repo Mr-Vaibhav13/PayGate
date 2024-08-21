@@ -8,6 +8,7 @@ import Navbar from './component/authentication/Navbar';
 import AdminPage from './component/admin/AdminPage';
 import AdminRoute from './component/admin/AdminRoute';
 import Transactions from './component/Transactions';
+import Success from './component/Success';
 
 const App = () => {
   const location = useLocation();
@@ -23,6 +24,7 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/gate" element={<UPIGateway />} />
         <Route path="/trans" element={<Transactions />} />
+        <Route path="/payment-success" element={<Success />} />
       
         <Route path="/admin" element={
           <AdminRoute>

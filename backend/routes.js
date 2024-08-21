@@ -130,69 +130,73 @@ router.get('/admin/upi-ids', isAdmin, async (req, res) => {
 
 // Generate QR using random UPI id 
 router.get('/api/upi-qr', async (req, res) => {
-    const { amount } = req.query;
+  const { amount } = req.query;
 
-    try {
-        // Validate the amount
-        if (!amount || isNaN(amount)) {
-            return res.status(400).json({ error: 'Invalid amount' });
-        }
+  try {
+      // Validate the amount
+      if (!amount || isNaN(amount)) {
+          return res.status(400).json({ error: 'Invalid amount' });
+      }
 
-        // Fetch all UPI IDs from the collection
-        const upiIds = await UPIModel.find();
+      // Fetch all UPI IDs from the collection
+      const upiIds = await UPIModel.find();
 
-        if (upiIds.length === 0) {
-            return res.status(404).json({ error: 'No UPI IDs available' });
-        }
+      if (upiIds.length === 0) {
+          return res.status(404).json({ error: 'No UPI IDs available' });
+      }
 
-        // Choose a random UPI ID
-        const randomIndex = Math.floor(Math.random() * upiIds.length);
-        const selectedUpiId = upiIds[randomIndex].upiId;
+      // Choose a random UPI ID
+      const randomIndex = Math.floor(Math.random() * upiIds.length);
+      const selectedUpiId = upiIds[randomIndex].upiId;
 
-        // Store the used UPI ID and amount
-        const usedUpiId = new UsedUpiId({
-            upiId: selectedUpiId,
-            amount: parseFloat(amount),
-        });
+      // Create a unique transaction ID
+      const transactionId = Date.now().toString(); // Generate a unique ID based on timestamp
 
-        await usedUpiId.save();
+      // Store the used UPI ID and amount with transaction ID
+      const usedUpiId = new UsedUpiId({
+          upiId: selectedUpiId,
+          amount: parseFloat(amount),
+          transactionId,
+      });
 
-        // Create UPI link
-        const upiLink = `upi://pay?pa=${encodeURIComponent(selectedUpiId)}&pn=Example%20Merchant&tr=${Date.now()}&tn=Payment%20for%20Order&am=${encodeURIComponent(amount)}&cu=INR`;
+      // await usedUpiId.save();
 
-        // Generate QR code
-        QRCode.toDataURL(upiLink, (err, url) => {
-            if (err) {
-                return res.status(500).json({ error: 'Failed to generate QR code' });
-            }
-            res.json({ qrCodeUrl: url, upiLink });
-        });
-    } catch (error) {
-        console.error('Error generating QR code:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});  
+      // Create UPI link
+      const upiLink = `upi://pay?pa=${encodeURIComponent(selectedUpiId)}&pn=Example%20Merchant&tr=${transactionId}&tn=Payment%20for%20Order&am=${encodeURIComponent(amount)}&cu=INR`;
+
+      // Generate QR code
+      QRCode.toDataURL(upiLink, (err, url) => {
+          if (err) {
+              return res.status(500).json({ error: 'Failed to generate QR code' });
+          }
+          res.json({ qrCodeUrl: url, upiId: selectedUpiId, transactionId }); // Return transactionId
+      });
+  } catch (error) {
+      console.error('Error generating QR code:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+ 
 
 
 // Endpoint to store payment info
 router.post('/api/store-payment-info', async (req, res) => {
-    try {
-        const { amount, upiId } = req.body;
-        
-        // Validate request data
-        if (!amount || !upiId) {
-            return res.status(400).json({ error: 'Amount and UPI ID are required' });
-        }
-        
-        const usedUpiId = new UsedUpiId({ amount, upiId });
-        await usedUpiId.save();
-        res.status(201).json({ message: 'Payment info stored successfully' });
-    } catch (error) {
-        console.error('Error storing payment info:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+  try {
+      const { amount, upiId, transactionId } = req.body; // Include transactionId
+      
+      // Validate request data
+      if (!amount || !upiId || !transactionId) {
+          return res.status(400).json({ error: 'Amount, UPI ID, and Transaction ID are required' });
+      }
+      
+      const usedUpiId = new UsedUpiId({ amount, upiId, transactionId }); // Save transactionId
+      await usedUpiId.save();
+      res.status(201).json({ message: 'Payment info stored successfully' });
+  } catch (error) {
+      console.error('Error storing payment info:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
 });
-
 
 
 
@@ -278,27 +282,41 @@ router.get('/trans', async (req, res) => {
 
 
 // Endpoint to update payment status
-// router.post('/api/update-payment-status', async (req, res) => {
-//     const { transactionId, status } = req.body;
+router.post('/api/update-payment-status', async (req, res) => {
+  const { transactionId, status } = req.body;
 
-//     await Payment.updateOne({ transactionId }, { status });
+  try {
+      const result = await UsedUpiId.updateOne({ transactionId }, { status });
+      if (result.nModified === 0) {
+          return res.status(404).json({ message: 'Transaction not found' });
+      }
+      res.json({ message: 'Payment status updated' });
+  } catch (error) {
+      console.error('Error updating payment status:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
-//     res.json({ message: 'Payment status updated' });
-// });
 
 
-// // Endpoint to check payment status
-// router.get('/api/check-payment-status', async (req, res) => {
-//     const { transactionId } = req.query;
+// Endpoint to check payment status
+router.get('/api/check-payment-status', async (req, res) => {
+  const { transactionId } = req.query;
 
-//     const payment = await Payment.findOne({ transactionId });
+  try {
+    const payment = await UsedUpiId.findOne({ transactionId });
 
-//     if (payment) {
-//         res.json({ status: payment.status });
-//     } else {
-//         res.status(404).json({ status: 'not found' });
-//     }
-// });
+    if (payment) {
+      res.json({ status: payment.status });
+    } else {
+      res.status(404).json({ status: 'not found' });
+    }
+  } catch (error) {
+    console.error('Error checking payment status:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
   
 
 

@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const usedUpiIdSchema = new mongoose.Schema({
   upiId: String,
   amount: Number,
-  status: { type: String, default: 'Pending' }, // Add this field
+  transactionId: { type: String, required: true }, // Add this field
+  status: { type: String, default: 'Pending' }, 
   createdAt: { type: Date, default: Date.now }
 });
 

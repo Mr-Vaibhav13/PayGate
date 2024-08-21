@@ -2,11 +2,11 @@ const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema({
     transactionId: { type: String, required: true },
-    status: { type: String, default: 'pending' },  // Default status is pending
+    status: { type: String, default: 'pending' },
     amount: { type: Number, required: true },
     qrCodeUrl: { type: String, required: true },
     upiId: { type: String, required: true },
-}, { timestamps: true });  // Add timestamps to track createdAt and updatedAt
+}, { timestamps: true });
 
 const Payment = mongoose.model('Payment', paymentSchema);
 

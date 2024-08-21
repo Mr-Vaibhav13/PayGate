@@ -3,8 +3,7 @@ import React, { useState, useEffect } from 'react';
 const UPIAmount = () => {
     const [amount, setAmount] = useState('');
     const [paymentLink, setPaymentLink] = useState('');
-    const [copySuccess, setCopySuccess] = useState('');
-
+    
     useEffect(() => {
         if (paymentLink) {
             // Perform redirection when paymentLink state changes
@@ -35,11 +34,6 @@ const UPIAmount = () => {
         }
     };
 
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(paymentLink).then(() => {
-            setCopySuccess('Link copied!');
-        });
-    };
 
     return (
         <div className='flex-col p-2'>

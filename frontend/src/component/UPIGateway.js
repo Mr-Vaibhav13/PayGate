@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import MobileIntent from './UPI_Intent/MobileIntent';
 import PcIntent from './UPI_Intent/PcIntent';
 
-
 const UPIGateway = () => {
-    
     const amount = localStorage.getItem("amount");
     const vpa = localStorage.getItem("vpa");
 
@@ -15,78 +13,41 @@ const UPIGateway = () => {
     const [timeLeft, setTimeLeft] = useState(300);
     const [payments, setPayments] = useState([]);
     const [transactionId, setTransactionId] = useState('');
-    const [paymentStatus, setPaymentStatus] = useState('pending')
+    const [paymentStatus, setPaymentStatus] = useState('pending');
 
     const navigate = useNavigate(); // React Router navigate function
 
-
-    // const fetchQrCode = async () => {
-    //     try {
-    //         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upi-qr?amount=${encodeURIComponent(amount)}`);
-    //         if (!response.ok) {
-    //             throw new Error('Network response was not ok');
-    //         }
-    //         const data = await response.json();
-    //         setQrCodeUrl(data.qrCodeUrl);
-    //         setUpiId(data.upiId);
-
-    //         // Store amount and QR code in the database
-    //         await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/store-payment-info`, {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //             },
-    //             body: JSON.stringify({
-    //                 amount,
-    //                 qrCodeUrl: data.qrCodeUrl,
-    //             }),
-    //         });
-    //     } catch (error) {
-    //         console.error('Error fetching QR code:', error);
-    //     }
-    // };
-
+    // Fetch QR code and transaction ID
     const fetchQrCode = async () => {
-        try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upi-qr?amount=${encodeURIComponent(amount)}`);
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const data = await response.json();
-            setQrCodeUrl(data.qrCodeUrl);
-            setUpiId(data.upiId);
-            setTransactionId(data.transactionId); // Store transactionId
-
-            // Store amount and QR code in the database
-            await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/store-payment-info`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    amount,
-                    qrCodeUrl: data.qrCodeUrl,
-                    transactionId: data.transactionId, // Store transactionId
-                }),
-            });
-        } catch (error) {
-            console.error('Error fetching QR code:', error);
+    try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upi-qr?amount=${encodeURIComponent(amount)}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
         }
-    };
+        const data = await response.json();
+        setQrCodeUrl(data.qrCodeUrl);
+        setUpiId(data.upiId);
+        setTransactionId(data.transactionId); // Store transactionId
 
-    const fetchPayments = async () => {
-        try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/used-upi-ids`);
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const data = await response.json();
-            setPayments(data);
-        } catch (error) {
-            console.error('Error fetching payments:', error);
-        }
-    };
+        // Store amount and QR code in the database
+        await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/store-payment-info`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                amount,
+                upiId: data.upiId,
+                transactionId: data.transactionId, // Store transactionId
+            }),
+        });
+    } catch (error) {
+        console.error('Error fetching QR code:', error);
+    }
+};
 
+    
+    // Fetch QR code when amount and vpa are available
     useEffect(() => {
         if (amount && vpa) {
             fetchQrCode();
@@ -101,6 +62,7 @@ const UPIGateway = () => {
         return () => clearInterval(intervalId);
     }, [amount, vpa]);
 
+    // Check if the device is mobile
     useEffect(() => {
         const checkIfMobile = () => {
             const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -126,36 +88,29 @@ const UPIGateway = () => {
         return () => clearInterval(intervalId);
     }, []);
 
-    useEffect(() => {
-        fetchPayments();
-    }, []);
+    // Polling payment status
+useEffect(() => {
+    if (transactionId) {
+        const intervalId = setInterval(async () => {
+            try {
+                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/check-payment-status?transactionId=${transactionId}`);
+                const data = await response.json();
+                if (data.status === 'completed') {
+                    setPaymentStatus('completed');
+                    clearInterval(intervalId); // Stop polling after payment is completed
+                    navigate('/payment-success'); // Redirect after payment is completed
+                }
+            } catch (error) {
+                console.error('Error checking payment status:', error);
+            }
+        }, 5000); // Check every 5 seconds
+
+        return () => clearInterval(intervalId);
+    }
+}, [transactionId, navigate]);
 
 
-    // new
-    // useEffect(() => {
-    //     if (transactionId) {
-    //         const intervalId = setInterval(async () => {
-    //             try {
-    //                 const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/check-payment-status?transactionId=${transactionId}`);
-    //                 const data = await response.json();
-    //                 if (data.status === 'completed') {
-    //                     setPaymentStatus('completed');
-    //                     clearInterval(intervalId); // Stop polling after payment is completed
-    //                     navigate('/payment-success'); // Redirect after payment is completed
-    //                 }
-    //             } catch (error) {
-    //                 console.error('Error checking payment status:', error);
-    //             }
-    //         }, 5000); // Check every 5 seconds
-
-    //         return () => clearInterval(intervalId);
-    //     }
-    // }, [transactionId, navigate]);
-
-
-
-    
-
+    // Format time for display
     const formatTime = (seconds) => {
         const minutes = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -183,12 +138,10 @@ const UPIGateway = () => {
                     </div>
                 )}
 
-{
-            !isMobile ? 
-            <PcIntent /> :
-            <MobileIntent vpa={vpa} amount={amount}/>
-
-            }
+                {!isMobile ? 
+                    <PcIntent /> :
+                    <MobileIntent vpa={vpa} amount={amount} />
+                }
 
             </div>
         </div>
