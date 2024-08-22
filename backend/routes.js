@@ -258,7 +258,7 @@ let clients = []; // Array to keep track of connected clients
 
 
 
-// ------------ SSE and WEB HOOK ----------------
+// ------------ SSE(server-sent events) and WEB HOOK ----------------
 
 const broadcast = (message) => {
   clients.forEach((client) => {
