@@ -11,7 +11,6 @@ const UPIGateway = () => {
     const [upiId, setUpiId] = useState('');
     const [isMobile, setIsMobile] = useState(false);
     const [timeLeft, setTimeLeft] = useState(300);
-    const [payments, setPayments] = useState([]);
     const [transactionId, setTransactionId] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('pending');
 
@@ -62,6 +61,7 @@ const UPIGateway = () => {
         return () => clearInterval(intervalId);
     }, [amount, vpa]);
 
+
     // Check if the device is mobile
     useEffect(() => {
         const checkIfMobile = () => {
@@ -88,26 +88,36 @@ const UPIGateway = () => {
         return () => clearInterval(intervalId);
     }, []);
 
-    // Polling payment status
-useEffect(() => {
-    if (transactionId) {
-        const intervalId = setInterval(async () => {
-            try {
-                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/check-payment-status?transactionId=${transactionId}`);
-                const data = await response.json();
-                if (data.status === 'completed') {
-                    setPaymentStatus('completed');
-                    clearInterval(intervalId); // Stop polling after payment is completed
-                    navigate('/payment-success'); // Redirect after payment is completed
-                }
-            } catch (error) {
-                console.error('Error checking payment status:', error);
-            }
-        }, 5000); // Check every 5 seconds
 
-        return () => clearInterval(intervalId);
+
+    // Polling payment status
+// useEffect(() => {
+//     if (transactionId) {
+//         const intervalId = setInterval(async () => {
+//             try {
+//                 const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/check-payment-status?transactionId=${transactionId}`);
+//                 const data = await response.json();
+//                 if (data.status === 'completed') {
+//                     setPaymentStatus('completed');
+//                     clearInterval(intervalId); // Stop polling after payment is completed
+//                     navigate('/payment-success'); // Redirect after payment is completed
+//                 }
+//             } catch (error) {
+//                 console.error('Error checking payment status:', error);
+//             }
+//         }, 5000); // Check every 5 seconds
+
+//         return () => clearInterval(intervalId);
+//     }
+// }, [transactionId, navigate]);
+
+// Check payment status after the webhook updates it
+useEffect(() => {
+    console.log('Payment Status:', paymentStatus); // Debug log
+    if (paymentStatus === 'completed') {
+        navigate('/payment-success'); // Redirect after payment is completed
     }
-}, [transactionId, navigate]);
+}, [paymentStatus, navigate]);
 
 
     // Format time for display
@@ -124,7 +134,11 @@ useEffect(() => {
                 <p className='text-center pt-5 text-lg font-bold text-white'>ReduxPay</p>
             </div>
 
-            <div className='text-center m-4 text-4xl font-bold'>₹ {amount}</div>
+            <div className='text-center'>
+                <p className='font-semibold'>Transaction ID: {transactionId}</p>
+            </div>
+
+            <div className='text-center text-4xl font-bold'>₹ {amount}</div>
 
             <div>
                 {qrCodeUrl && !isMobile && (

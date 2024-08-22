@@ -8,10 +8,12 @@ const bcrypt = require('bcryptjs');
 const { UserModel } = require('./databases/db');
 const UPIModel = require('./databases/upiDB');
 const { UsedUpiId } = require('./databases/usedUpiDB');
-const Payment = require("./databases/paymentDB")
+const crypto = require('crypto');
+
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
 
 // Admin middleware
@@ -317,7 +319,58 @@ router.get('/api/check-payment-status', async (req, res) => {
   }
 });
 
+
+
+
+
+// WEBHOOK
+
+
+
+const validateWebhook = (req) => {
+  const signature = req.headers['x-signature'];
+  const payload = JSON.stringify(req.body);
   
+  if (!signature) return false;
+  
+  const expectedSignature = crypto
+    .createHmac('sha256', WEBHOOK_SECRET)
+    .update(payload)
+    .digest('hex');
+  
+  return signature === expectedSignature;
+};
+
+
+
+
+// Webhook endpoint for payment status updates
+router.post('/api/payment-webhook', async (req, res) => {
+  try {
+    // Validate the webhook request
+    if (!validateWebhook(req)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { transactionId, status } = req.body;
+
+    // Find the payment in the database
+    const payment = await UsedUpiId.findOne({ transactionId });
+    if (payment) {
+      payment.status = status;
+      await payment.save();
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Payment not found' });
+    }
+  } catch (error) {
+    console.error('Error handling webhook:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+
 
 
 

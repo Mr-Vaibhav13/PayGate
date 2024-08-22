@@ -3,10 +3,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { connectDB } = require('./databases/db');
-const routes = require('./routes'); // Import the routes
+const routes = require('./routes'); 
+// const { schedulePaymentStatusCheck } = require('./cronJobs');
+
 
 const app = express();
 const port = process.env.BACKEND_PORT || 3001;
+
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -17,6 +20,14 @@ connectDB();
 
 // Use the routes
 app.use('/', routes);
+
+
+// Server-Sent Events (SSE)
+let clients = [];
+
+
+
+
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);
