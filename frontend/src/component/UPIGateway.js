@@ -13,6 +13,8 @@ const UPIGateway = () => {
     const [timeLeft, setTimeLeft] = useState(300);
     const [transactionId, setTransactionId] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('pending');
+    
+
 
     const navigate = useNavigate(); // React Router navigate function
 
@@ -89,8 +91,9 @@ const UPIGateway = () => {
     }, []);
 
 
+    
 
-    // Polling payment status
+    // Polling redirect 
 // useEffect(() => {
 //     if (transactionId) {
 //         const intervalId = setInterval(async () => {
@@ -111,13 +114,32 @@ const UPIGateway = () => {
 //     }
 // }, [transactionId, navigate]);
 
-// Check payment status after the webhook updates it
+
 useEffect(() => {
-    console.log('Payment Status:', paymentStatus); // Debug log
-    if (paymentStatus === 'completed') {
-        navigate('/payment-success'); // Redirect after payment is completed
-    }
-}, [paymentStatus, navigate]);
+    // Set up SSE connection
+    const eventSource = new EventSource(`${process.env.REACT_APP_BACKEND_URL}/events`);
+
+    eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log('Received SSE event:', data);
+
+        // Check for completed status and redirect
+        if (data.status === 'completed') {
+            setPaymentStatus('completed');
+            navigate('/payment-success'); // Redirect after payment is completed
+        }
+    };
+
+    eventSource.onerror = (error) => {
+        console.error('SSE Error:', error);
+    };
+
+    // Clean up when the component is unmounted
+    return () => {
+        eventSource.close();
+    };
+}, [navigate]);
+
 
 
     // Format time for display
@@ -133,7 +155,9 @@ useEffect(() => {
                 <p className='text-center p-5 text-white font-semibold'>UPI gateway</p>
                 <p className='text-center pt-5 text-lg font-bold text-white'>ReduxPay</p>
             </div>
-
+            <div>
+      <h1>Payment Status: {paymentStatus}</h1>
+    </div>
             <div className='text-center'>
                 <p className='font-semibold'>Transaction ID: {transactionId}</p>
             </div>

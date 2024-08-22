@@ -22,8 +22,7 @@ connectDB();
 app.use('/', routes);
 
 
-// Server-Sent Events (SSE)
-let clients = [];
+
 
 
 

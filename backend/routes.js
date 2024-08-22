@@ -11,6 +11,7 @@ const { UsedUpiId } = require('./databases/usedUpiDB');
 const crypto = require('crypto');
 
 
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -35,9 +36,6 @@ const isAdmin = async (req, res, next) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-
-
 
 // SIGN UP
 router.post('/', async (req, res) => {
@@ -68,10 +66,6 @@ router.post('/', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-
-
-
-
 
 // LOGIN ROUTE
 router.post('/login', async (req, res) => {
@@ -127,9 +121,6 @@ router.get('/admin/upi-ids', isAdmin, async (req, res) => {
   }
 });
 
-
-
-
 // Generate QR using random UPI id 
 router.get('/api/upi-qr', async (req, res) => {
   const { amount } = req.query;
@@ -178,8 +169,6 @@ router.get('/api/upi-qr', async (req, res) => {
       res.status(500).json({ error: 'Internal Server Error' });
   }
 });
- 
-
 
 // Endpoint to store payment info
 router.post('/api/store-payment-info', async (req, res) => {
@@ -200,9 +189,6 @@ router.post('/api/store-payment-info', async (req, res) => {
   }
 });
 
-
-
-
 // Get list of all used UPI IDs
 router.get('/api/used-upi-ids', async (req, res) => {
     try {
@@ -213,13 +199,6 @@ router.get('/api/used-upi-ids', async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
-
-
-  
-
-
-
-
 
 // Fetch a random UPI ID
 router.get('/api/random-upi-id', async (req, res) => {
@@ -235,10 +214,6 @@ router.get('/api/random-upi-id', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-
-
-
-
 
 // Delete UPI IDs
 router.delete('/admin/delete-upi-ids', async (req, res) => {
@@ -264,11 +239,6 @@ router.delete('/admin/delete-upi-ids', async (req, res) => {
   }
 });
 
-
-
-  
-
-
 // Fetch all transactions with their status
 router.get('/trans', async (req, res) => {
     try {
@@ -283,50 +253,47 @@ router.get('/trans', async (req, res) => {
 
 
 
-// Endpoint to update payment status
-router.post('/api/update-payment-status', async (req, res) => {
-  const { transactionId, status } = req.body;
+let clients = []; // Array to keep track of connected clients
 
-  try {
-      const result = await UsedUpiId.updateOne({ transactionId }, { status });
-      if (result.nModified === 0) {
-          return res.status(404).json({ message: 'Transaction not found' });
-      }
-      res.json({ message: 'Payment status updated' });
-  } catch (error) {
-      console.error('Error updating payment status:', error);
-      res.status(500).json({ message: 'Internal server error' });
-  }
+
+
+
+// ------------ SSE and WEB HOOK ----------------
+
+const broadcast = (message) => {
+  clients.forEach((client) => {
+    client.res.write(`data: ${message}\n\n`);
+  });
+};
+
+
+// SSE endpoint
+router.get('/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  // // Simulate sending a message every 5 seconds
+  const intervalId = setInterval(() => {
+      res.write(`data: ${JSON.stringify({ status: 'completed' })}\n\n`);
+  }, 5000);
+
+  // Clean up when the connection is closed
+  req.on('close', () => {
+      clearInterval(intervalId);
+      res.end();
+  });
+
+  // Send an initial comment to keep the connection open
+  res.write(':connected\n\n');
 });
 
-
-
-// Endpoint to check payment status
-router.get('/api/check-payment-status', async (req, res) => {
-  const { transactionId } = req.query;
-
-  try {
-    const payment = await UsedUpiId.findOne({ transactionId });
-
-    if (payment) {
-      res.json({ status: payment.status });
-    } else {
-      res.status(404).json({ status: 'not found' });
-    }
-  } catch (error) {
-    console.error('Error checking payment status:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
 
 
 
 
 
 // WEBHOOK
-
-
-
 const validateWebhook = (req) => {
   const signature = req.headers['x-signature'];
   const payload = JSON.stringify(req.body);
@@ -340,8 +307,6 @@ const validateWebhook = (req) => {
   
   return signature === expectedSignature;
 };
-
-
 
 
 // Webhook endpoint for payment status updates
@@ -359,6 +324,9 @@ router.post('/api/payment-webhook', async (req, res) => {
     if (payment) {
       payment.status = status;
       await payment.save();
+      
+      broadcast(JSON.stringify({ transactionId, status }));
+      
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'Payment not found' });
@@ -372,6 +340,38 @@ router.post('/api/payment-webhook', async (req, res) => {
 
 
 
+
+
+// -----------------------END --------------------
+
+
+
+
+
+
+
+
+
+
+
+
+// Endpoint to check payment status TO BE DELETE AS USING POLLING
+router.get('/api/check-payment-status', async (req, res) => {
+  const { transactionId } = req.query;
+
+  try {
+    const payment = await UsedUpiId.findOne({ transactionId });
+
+    if (payment) {
+      res.json({ status: payment.status });
+    } else {
+      res.status(404).json({ status: 'not found' });
+    }
+  } catch (error) {
+    console.error('Error checking payment status:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 
 // Admin verification
