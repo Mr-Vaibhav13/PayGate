@@ -253,14 +253,15 @@ router.get('/trans', async (req, res) => {
 
 
 
-let clients = []; // Array to keep track of connected clients
-
+// Array to keep track of connected clients
+let clients = []; 
 
 
 
 // ------------ SSE(server-sent events) and WEB HOOK ----------------
 
 const broadcast = (message) => {
+  // console.log(clients[0].res)
   clients.forEach((client) => {
     client.res.write(`data: ${message}\n\n`);
   });
@@ -273,20 +274,30 @@ router.get('/events', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
-  // // Simulate sending a message every 5 seconds
-  const intervalId = setInterval(() => {
-      res.write(`data: ${JSON.stringify({ status: 'completed' })}\n\n`);
-  }, 5000);
+  // // // Simulate sending a message every 5 seconds
+  // const intervalId = setInterval(() => {
+  //     res.write(`data: ${JSON.stringify({ status: 'completed' })}\n\n`);
+  // }, 5000);
+  
+  clients.push({ res });
 
   // Clean up when the connection is closed
   req.on('close', () => {
-      clearInterval(intervalId);
+      // clearInterval(intervalId);
+      clients = clients.filter(client => client.res !== res);
       res.end();
   });
 
   // Send an initial comment to keep the connection open
   res.write(':connected\n\n');
 });
+
+
+
+// router.get('/simulate-payment', (req, res) => {
+//   broadcast(JSON.stringify({ status: 'completed', orderId: 123 }));
+//   res.send('Simulated payment status change sent to clients.');  
+// });
 
 
 

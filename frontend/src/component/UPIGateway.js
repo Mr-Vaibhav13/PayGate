@@ -13,8 +13,6 @@ const UPIGateway = () => {
     const [timeLeft, setTimeLeft] = useState(300);
     const [transactionId, setTransactionId] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('pending');
-    
-
 
     const navigate = useNavigate(); // React Router navigate function
 
@@ -90,8 +88,12 @@ const UPIGateway = () => {
         return () => clearInterval(intervalId);
     }, []);
 
-
-    
+    // Format time for display
+    const formatTime = (seconds) => {
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+    };
 
     // Polling redirect 
 // useEffect(() => {
@@ -114,6 +116,11 @@ const UPIGateway = () => {
 //     }
 // }, [transactionId, navigate]);
 
+
+
+
+
+// --------- SSE ------------
 
 useEffect(() => {
     // Set up SSE connection
@@ -142,12 +149,11 @@ useEffect(() => {
 
 
 
-    // Format time for display
-    const formatTime = (seconds) => {
-        const minutes = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
-    };
+// ------------------- END ------------------
+
+
+
+    
 
     return (
         <div className='border-2 border-black h-[630px] rounded-md mt-10 w-96 m-auto'>
