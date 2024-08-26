@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import CryptoJS from 'crypto-js';
+
 
 const Admin = () => {
   const [upiIds, setUpiIds] = useState([]);
@@ -22,6 +24,8 @@ const Admin = () => {
         console.error('Error fetching UPI IDs:', error);
       }
     };
+    // console.log('Webhook Secret:', process.env.REACT_APP_WEBHOOK_SECRET);
+
 
     fetchUpiIds();
   }, []);
@@ -103,60 +107,31 @@ const Admin = () => {
     }
   };
 
-  // const handleValidate = async (transactionId) => {
-  //   try {
-  //     const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/payment-webhook`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         'Authorization': `Bearer ${localStorage.getItem('token')}`
-  //       },
-  //       body: JSON.stringify({
-  //         transactionId,
-  //         status: 'completed' // Simulating the status update
-  //       }),
-  //     });
-  
-  //     const result = await response.json();
-  
-  //     if (result.success) {
-  //       alert(`Transaction ${transactionId} status update request sent.`);
-  //       // Temporarily update the status in the UI
-  //       setUsedUpiIds(prevState =>
-  //         prevState.map(entry =>
-  //           entry.transactionId === transactionId
-  //             ? { ...entry, status: 'completed' }
-  //             : entry
-  //         )
-  //       );
-  //     } else {
-  //       alert(`Failed to send status update request for transaction ${transactionId}.`);
-  //     }
-  //   } catch (error) {
-  //     console.error('Error validating payment status:', error);
-  //   }
-  // };
 
 
   const handleValidate = async (transactionId) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/update-payment-status`, {
+      const payload = JSON.stringify({
+        transactionId,
+        status: 'completed'
+      });
+
+      const xSignature = CryptoJS.HmacSHA256(payload, process.env.REACT_APP_WEBHOOK_SECRET).toString(CryptoJS.enc.Hex);
+
+  
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/payment-webhook`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'x-signature': xSignature, // Pass the x-signature header
         },
-        body: JSON.stringify({
-          transactionId,
-          status: 'completed'
-        }),
+        body: payload,
       });
   
       const result = await response.json();
   
       if (result.success) {
         alert(`Transaction ${transactionId} status updated to completed.`);
-        // Update the state to reflect the changes
         setUsedUpiIds(prevState =>
           prevState.map(entry =>
             entry.transactionId === transactionId
@@ -171,7 +146,7 @@ const Admin = () => {
       console.error('Error validating payment status:', error);
     }
   };
-
+  
 
   const openModal = (transactionId) => {
     setShowImage(utrDetails[transactionId]?.utrImage);

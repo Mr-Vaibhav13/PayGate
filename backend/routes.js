@@ -14,6 +14,7 @@ const multer = require('multer');
 const path= require("path")
 
 
+
 const upload = multer({
   dest: 'uploads/', // Directory to store uploaded files
   limits: {
@@ -350,7 +351,7 @@ const validateWebhook = (req) => {
   const signature = req.headers['x-signature'];
   const payload = JSON.stringify(req.body);
 
-  // console.log('Received Signature:', signature);
+  console.log('Received Signature:', signature);
   
   if (!signature) return false;
   
@@ -359,8 +360,8 @@ const validateWebhook = (req) => {
     .update(payload)
     .digest('hex');
 
-  // console.log('Expected Signature:', expectedSignature);
-  
+  console.log('Expected Signature:', expectedSignature);
+  // console.log(signature === expectedSignature)
   return signature === expectedSignature;
 };
 
@@ -369,8 +370,10 @@ const validateWebhook = (req) => {
 router.post('/api/payment-webhook', async (req, res) => {
   try {
     // Validate the webhook request
+    // console.log(req)
     if (!validateWebhook(req)) {
       return res.status(403).json({ error: 'Forbidden' });
+
     }
 
     const { transactionId, status } = req.body;
