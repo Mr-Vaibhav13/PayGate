@@ -7,8 +7,27 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { UserModel } = require('./databases/db');
 const UPIModel = require('./databases/upiDB');
+const UTRModel = require("./databases/utrDB");
 const { UsedUpiId } = require('./databases/usedUpiDB');
 const crypto = require('crypto');
+const multer = require('multer');
+const path= require("path")
+
+
+const upload = multer({
+  dest: 'uploads/', // Directory to store uploaded files
+  limits: {
+      fileSize: 5 * 1024 * 1024 // Limit file size to 5MB
+  },
+  fileFilter: (req, file, cb) => {
+      // Accept image files only
+      if (!file.mimetype.startsWith('image/')) {
+          return cb(new Error('Only image files are allowed'), false);
+      }
+      cb(null, true);
+  }
+});
+
 
 
 
@@ -294,13 +313,35 @@ router.get('/events', (req, res) => {
 
 
 
-// router.get('/simulate-payment', (req, res) => {
-//   broadcast(JSON.stringify({ status: 'completed', orderId: 123 }));
-//   res.send('Simulated payment status change sent to clients.');  
-// });
+// Simulate UPI Payment Confirmation
+// Simulate UPI network sending payment confirmation
+router.post('/simulate-upi-payment', async (req, res) => {
+  try {
+    const { transactionId, status } = req.body;
 
+    // Simulate sending a POST request to your webhook endpoint
+    const webhookResponse = await fetch('http://localhost:3001/api/payment-webhook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-signature': 'your-signature-here', // Add your signature for validation
+      },
+      body: JSON.stringify({
+        transactionId,
+        status
+      }),
+    });
 
-
+    if (webhookResponse.ok) {
+      res.json({ success: true, message: 'Webhook notified successfully' });
+    } else {
+      throw new Error('Failed to notify webhook');
+    }
+  } catch (error) {
+    console.error('Error simulating UPI payment:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
 
 
@@ -308,6 +349,8 @@ router.get('/events', (req, res) => {
 const validateWebhook = (req) => {
   const signature = req.headers['x-signature'];
   const payload = JSON.stringify(req.body);
+
+  // console.log('Received Signature:', signature);
   
   if (!signature) return false;
   
@@ -315,6 +358,8 @@ const validateWebhook = (req) => {
     .createHmac('sha256', WEBHOOK_SECRET)
     .update(payload)
     .digest('hex');
+
+  // console.log('Expected Signature:', expectedSignature);
   
   return signature === expectedSignature;
 };
@@ -357,13 +402,101 @@ router.post('/api/payment-webhook', async (req, res) => {
 
 
 
+router.post('/api/store-utr-info', upload.single('utrImage'), async (req, res) => {
+  try {
+    const { transactionId, utrNumber } = req.body;
+    const utrImage = req.file ? req.file.path : null; // Store the path of the uploaded UTR image
+
+    // Validate request data
+    if (!transactionId || !utrNumber) {
+      return res.status(400).json({ error: 'Transaction ID and UTR Number are required' });
+    }
+
+    // Store UTR info
+    const utrInfo = new UTRModel({
+      transactionId,
+      utrNumber,
+      utrImage
+    });
+    await utrInfo.save();
+
+    res.status(201).json({ message: 'UTR details stored successfully' });
+  } catch (error) {
+    console.error('Error storing UTR info:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 
 
 
+router.get('/api/transaction-info/:transactionId', async (req, res) => {
+  const { transactionId } = req.params;
+
+  try {
+      const payment = await UsedUpiId.findOne({ transactionId });
+      if (payment) {
+          res.json(payment);
+      } else {
+          res.status(404).json({ error: 'Payment not found' });
+      }
+  } catch (error) {
+      console.error('Error fetching payment info:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+router.get('/api/utr-details', async (req, res) => {
+  const { transactionId } = req.query;
+  
+  try {
+      // console.log(`Received transactionId: ${transactionId}`);  // Log the transaction ID
+
+      const utrDetails = await UTRModel.findOne({ transactionId: transactionId.trim() });
+      
+      if (!utrDetails) {
+          // console.log(`UTR details not found for transactionId: ${transactionId}`);  // Log if not found
+          return res.status(404).json({ error: 'UTR details not found' });
+      }
+
+      // console.log(`UTR details found: ${utrDetails}`);  // Log the found details
+      res.json(utrDetails);
+  } catch (error) {
+      console.error('Error fetching UTR details:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
 
 
+
+router.post('/api/update-payment-status', async (req, res) => {
+  const { transactionId, status } = req.body;
+
+  if (!transactionId || !status) {
+    return res.status(400).json({ error: 'Transaction ID and status are required' });
+  }
+
+  try {
+    const payment = await UsedUpiId.findOne({ transactionId });
+
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    payment.status = status;
+    await payment.save();
+
+    // Broadcast status change to all clients
+    broadcast(JSON.stringify({ transactionId, status }));
+
+    res.json({ success: true, message: 'Payment status updated successfully' });
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
 
 // Endpoint to check payment status TO BE DELETE AS USING POLLING

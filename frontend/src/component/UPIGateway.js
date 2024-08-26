@@ -14,6 +14,9 @@ const UPIGateway = () => {
     const [transactionId, setTransactionId] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('pending');
 
+    const [utrNumber, setUtrNumber] = useState('');
+    const [paymentPhoto, setPaymentPhoto] = useState(null);
+
     const navigate = useNavigate(); // React Router navigate function
 
     // Fetch QR code and transaction ID
@@ -152,18 +155,48 @@ useEffect(() => {
 // ------------------- END ------------------
 
 
+const handleFileChange = (event) => {
+    setPaymentPhoto(event.target.files[0]);
+};
+
+
+const handleSubmitUtrInfo = async () => {
+    try {
+      const utrFormData = new FormData();
+      utrFormData.append('transactionId', transactionId);
+      utrFormData.append('utrNumber', utrNumber);
+      if (paymentPhoto) {
+        utrFormData.append('utrImage', paymentPhoto);
+      }
+  
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/store-utr-info`, {
+        method: 'POST',
+        body: utrFormData,
+      });
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+      }
+
+      navigate("/trans")
+    } catch (error) {
+      console.error('Error submitting UTR info:', error);
+    }
+  };
+  
+
 
     
 
     return (
-        <div className='border-2 border-black h-[630px] rounded-md mt-10 w-96 m-auto'>
+        <div className='flex'>
+            <div className='border-2 border-black h-[630px] rounded-md mt-10 w-96 mx-10'>
             <div className='h-[150px] border-b-2 bg-blue-700 border-gray-400'>
                 <p className='text-center p-5 text-white font-semibold'>UPI gateway</p>
                 <p className='text-center pt-5 text-lg font-bold text-white'>ReduxPay</p>
             </div>
-            <div>
-      <h1>Payment Status: {paymentStatus}</h1>
-    </div>
+            
             <div className='text-center'>
                 <p className='font-semibold'>Transaction ID: {transactionId}</p>
             </div>
@@ -188,6 +221,29 @@ useEffect(() => {
                 }
 
             </div>
+            </div>
+
+            
+            
+            <div className='mt-4 flex flex-col items-center justify-center'>
+                    <input
+                        type='text'
+                        placeholder='Enter UTR Number'
+                        value={utrNumber}
+                        onChange={(e) => setUtrNumber(e.target.value)}
+                        className='p-2 border border-gray-300 rounded mb-2 w-64'
+                    />
+                    <input
+                        type='file'
+                        onChange={handleFileChange}
+                        className='p-2 border border-gray-300 rounded mb-2 w-64'
+                    />
+                    <button
+                        onClick={handleSubmitUtrInfo}
+                        className='bg-blue-500 hover:bg-blue-400 text-white py-2 px-4 rounded'>
+                        Submit Payment Info
+                    </button>
+                </div>
         </div>
     );
 };

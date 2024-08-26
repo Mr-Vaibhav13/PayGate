@@ -5,6 +5,7 @@ const cors = require('cors');
 const { connectDB } = require('./databases/db');
 const routes = require('./routes'); 
 // const { schedulePaymentStatusCheck } = require('./cronJobs');
+const path = require('path');
 
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/', routes);
 
 
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 
