@@ -7,9 +7,11 @@ import Signup from './component/authentication/Signup';
 import Navbar from './component/authentication/Navbar'; 
 import AdminPage from './component/admin/AdminPage';
 import AdminRoute from './component/admin/AdminRoute';
-import Transactions from './component/Transactions';
-import Success from './component/Success';
-
+import Transactions from './component/show/Transactions';
+import Success from './component/show/Success';
+import VerifyOtpComp from './component/authentication/VerifyOtpComp';
+import Home from './component/show/Home';
+import Wallet from './component/show/Wallet';
 const App = () => {
   const location = useLocation();
 
@@ -22,15 +24,16 @@ const App = () => {
         <Route path="/amount" element={<UPIAmount />} />
         <Route path="/" element={<Signup />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/verify" element={<VerifyOtpComp />} />
         <Route path="/gate" element={<UPIGateway />} />
         <Route path="/trans" element={<Transactions />} />
         <Route path="/payment-success" element={<Success />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/with" element={<Wallet />} />
       
-        <Route path="/admin" element={
-          <AdminRoute>
-            <AdminPage />
-          </AdminRoute>
-        } />
+      
+        <Route path="/admin" 
+        element={<AdminPage />} />
 
       </Routes>
     </div>

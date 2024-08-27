@@ -164,7 +164,7 @@ const Admin = () => {
       <div>
         <h1 className='text-4xl font-bold mb-5'>Admin - UPI ID</h1>
         <ul className='ml-5 list-disc'>
-          {upiIds.map((upiId, index) => (
+          {upiIds && upiIds.map((upiId, index) => (
             <li className='m-3 font-medium' key={index}>{upiId}</li>
           ))}
         </ul>

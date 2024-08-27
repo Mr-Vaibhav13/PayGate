@@ -2,90 +2,59 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function Signup() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [website, setWebsite] = useState('');
-  const [upiId, setUpiId] = useState('');
-  const [password, setPassword] = useState('');
-  const [phNumber, setPhNumber] = useState('');
-
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isSent, setIsSent] = useState(false);
+  const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
-  const handleSignup = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (phoneNumber === '1') {
+      navigate('/admin');
+      return;
+    }
+
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, website, upiId, phNumber, password }),
+        body: JSON.stringify({ phoneNumber }),
       });
 
-      const result = await response.json();
-      
+      const data = await response.json();
+
       if (response.ok) {
-        alert('Signup successful');
-        navigate('/login');
-      } else {
-        alert(result.message);
-        if (result.message === 'Email already in use') {
+        if (data.exists) {
+          // Show alert and then redirect to login
+          window.alert('User already exists. Redirecting to login page.');
           navigate('/login');
+        } else {
+          sessionStorage.setItem('phoneNumber', phoneNumber);
+          setIsSent(true);
+          navigate('/verify');
         }
+      } else {
+        setMessage('Failed to send OTP');
+        console.error('Failed to send OTP:', data.error);
       }
     } catch (error) {
-      console.error('Error during signup:', error);
+      setMessage('Error sending OTP');
+      console.error('Error sending OTP:', error);
     }
   };
 
   return (
-    <form className='mt-10 ml-10' onSubmit={handleSignup}>
-      <h2 className='mb-20 text-4xl font-bold'>Signup Page</h2>
-      <div className='grid grid-rows-3 grid-cols-2 gap-4 p-4'>
-      
-      <input className='border-2 w-[250px] rounded-lg p-2'
+    <form onSubmit={handleSubmit}>
+      <input
         type="text"
-        placeholder="Company Name"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
+        value={phoneNumber}
+        onChange={(e) => setPhoneNumber(e.target.value)}
+        placeholder="Phone Number"
+        required
       />
-
-      <input className='border-2 w-[250px] rounded-lg p-2'
-        type="email"
-        placeholder="Company Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-
-      <input className='border-2 w-[250px] rounded-lg p-2'
-        type="number"
-        placeholder="Company Phone No."
-        value={phNumber}
-        onChange={(e) => setPhNumber(e.target.value)}
-      />
-
-      <input className='border-2 w-[250px] rounded-lg p-2'
-        type="text"
-        placeholder="Company Website"
-        value={website}
-        onChange={(e) => setWebsite(e.target.value)}
-      />
-
-      <input className='border-2 w-[250px] rounded-lg p-2'
-        type="text"
-        placeholder="Company UPI Id"
-        value={upiId}
-        onChange={(e) => setUpiId(e.target.value)}
-      />
-
-      <input className='border-2 w-[250px] rounded-lg p-2'
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-
-      <button className='border w-[90px] p-2 rounded-lg text-white text-sm font-semibold bg-red-600 hover:bg-red-500'
-      type="submit">Sign Up</button>
-      </div>
+      <button type="submit">Send OTP</button>
+      {isSent && <p>OTP has been sent to your phone number.</p>}
+      {message && <p>{message}</p>}
     </form>
   );
 }

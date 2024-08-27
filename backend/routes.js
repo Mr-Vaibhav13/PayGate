@@ -11,7 +11,7 @@ const UTRModel = require("./databases/utrDB");
 const { UsedUpiId } = require('./databases/usedUpiDB');
 const crypto = require('crypto');
 const multer = require('multer');
-const path= require("path")
+
 
 
 
@@ -37,89 +37,36 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
 
+
+
 // Admin middleware
-const isAdmin = async (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
+// const isAdmin = async (req, res, next) => {
+//   const token = req.headers.authorization?.split(' ')[1];
+//   if (!token) {
+//     return res.status(401).json({ message: 'Unauthorized' });
+//   }
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.email === 'storeshoppy@gmail.com') {
-      return next();
-    } else {
-      return res.status(403).json({ message: 'Forbidden' });
-    }
-  } catch (err) {
-    console.error('Error verifying admin:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-// SIGN UP
-router.post('/', async (req, res) => {
-  const { username, email, website, upiId, phNumber, password } = req.body;
-
-  try {
-    const existingUser = await UserModel.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email already in use' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = new UserModel({
-      username,
-      email,
-      website,
-      upiId,
-      phNumber,
-      password: hashedPassword,
-    });
-
-    await newUser.save();
-
-    res.status(201).json({ message: 'User registered successfully' });
-  } catch (error) {
-    console.error('Error during signup:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// LOGIN ROUTE
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    if (email === 'storeshoppy@gmail.com' && password === 'test') {
-      const token = jwt.sign({ userId: 'adminId', email }, JWT_SECRET, { expiresIn: '1h' });
-      return res.json({ token, isAdmin: true });
-    }
-
-    const user = await UserModel.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid email or password' });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Invalid email or password' });
-    }
-
-    const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token, isAdmin: false });
-  } catch (error) {
-    console.error('Error during login:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+//   try {
+//     const decoded = jwt.verify(token, JWT_SECRET);
+//     if (decoded.email === 'storeshoppy@gmail.com') {
+//       return next();
+//     } else {
+//       return res.status(403).json({ message: 'Forbidden' });
+//     }
+//   } catch (err) {
+//     console.error('Error verifying admin:', err);
+//     res.status(500).json({ message: 'Internal server error' });
+//   }
+// };
 
 
 
 
-// Admin UPI management
-router.get('/admin/upi-ids', isAdmin, async (req, res) => {
+
+// Admin UPI management----------
+
+
+router.get('/admin/upi-ids', async (req, res) => {
   try {
     const upiCount = await UPIModel.countDocuments();
     
@@ -141,7 +88,7 @@ router.get('/admin/upi-ids', isAdmin, async (req, res) => {
   }
 });
 
-// Generate QR using random UPI id 
+// Generate QR using random UPI id ----------------
 router.get('/api/upi-qr', async (req, res) => {
   const { amount } = req.query;
 
@@ -220,7 +167,7 @@ router.get('/api/used-upi-ids', async (req, res) => {
     }
 });
 
-// Fetch a random UPI ID
+// Fetch a random UPI ID --------------------------
 router.get('/api/random-upi-id', async (req, res) => {
   try {
     const upiCount = await UPIModel.countDocuments();
@@ -235,7 +182,7 @@ router.get('/api/random-upi-id', async (req, res) => {
   }
 });
 
-// Delete UPI IDs
+// Delete UPI IDs--------
 router.delete('/admin/delete-upi-ids', async (req, res) => {
   const { upiIds } = req.body;
 
@@ -314,44 +261,13 @@ router.get('/events', (req, res) => {
 
 
 
-// Simulate UPI Payment Confirmation
-// Simulate UPI network sending payment confirmation
-router.post('/simulate-upi-payment', async (req, res) => {
-  try {
-    const { transactionId, status } = req.body;
-
-    // Simulate sending a POST request to your webhook endpoint
-    const webhookResponse = await fetch('http://localhost:3001/api/payment-webhook', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-signature': 'your-signature-here', // Add your signature for validation
-      },
-      body: JSON.stringify({
-        transactionId,
-        status
-      }),
-    });
-
-    if (webhookResponse.ok) {
-      res.json({ success: true, message: 'Webhook notified successfully' });
-    } else {
-      throw new Error('Failed to notify webhook');
-    }
-  } catch (error) {
-    console.error('Error simulating UPI payment:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-
 
 // WEBHOOK
 const validateWebhook = (req) => {
   const signature = req.headers['x-signature'];
   const payload = JSON.stringify(req.body);
 
-  console.log('Received Signature:', signature);
+  // console.log('Received Signature:', signature);
   
   if (!signature) return false;
   
@@ -360,13 +276,13 @@ const validateWebhook = (req) => {
     .update(payload)
     .digest('hex');
 
-  console.log('Expected Signature:', expectedSignature);
+  // console.log('Expected Signature:', expectedSignature);
   // console.log(signature === expectedSignature)
   return signature === expectedSignature;
 };
 
 
-// Webhook endpoint for payment status updates
+// Webhook endpoint for payment status updates-----------------
 router.post('/api/payment-webhook', async (req, res) => {
   try {
     // Validate the webhook request
@@ -432,24 +348,6 @@ router.post('/api/store-utr-info', upload.single('utrImage'), async (req, res) =
 
 
 
-
-router.get('/api/transaction-info/:transactionId', async (req, res) => {
-  const { transactionId } = req.params;
-
-  try {
-      const payment = await UsedUpiId.findOne({ transactionId });
-      if (payment) {
-          res.json(payment);
-      } else {
-          res.status(404).json({ error: 'Payment not found' });
-      }
-  } catch (error) {
-      console.error('Error fetching payment info:', error);
-      res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-
 router.get('/api/utr-details', async (req, res) => {
   const { transactionId } = req.query;
   
@@ -473,7 +371,7 @@ router.get('/api/utr-details', async (req, res) => {
 
 
 
-
+// ---------
 router.post('/api/update-payment-status', async (req, res) => {
   const { transactionId, status } = req.body;
 
@@ -521,8 +419,8 @@ router.get('/api/check-payment-status', async (req, res) => {
 });
 
 
-// Admin verification
-router.get('/admin', isAdmin, (req, res) => {
+// Admin verification-------------
+router.get('/admin', (req, res) => {
   res.status(200).json({ message: 'Admin verified' });
 });
 

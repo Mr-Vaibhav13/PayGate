@@ -98,27 +98,6 @@ const UPIGateway = () => {
         return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
-    // Polling redirect 
-// useEffect(() => {
-//     if (transactionId) {
-//         const intervalId = setInterval(async () => {
-//             try {
-//                 const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/check-payment-status?transactionId=${transactionId}`);
-//                 const data = await response.json();
-//                 if (data.status === 'completed') {
-//                     setPaymentStatus('completed');
-//                     clearInterval(intervalId); // Stop polling after payment is completed
-//                     navigate('/payment-success'); // Redirect after payment is completed
-//                 }
-//             } catch (error) {
-//                 console.error('Error checking payment status:', error);
-//             }
-//         }, 5000); // Check every 5 seconds
-
-//         return () => clearInterval(intervalId);
-//     }
-// }, [transactionId, navigate]);
-
 
 
 

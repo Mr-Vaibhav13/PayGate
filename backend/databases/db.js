@@ -14,16 +14,12 @@ const connectDB = async () => {
     }
 };
 
-
-const UserSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
-    email: { type: String, required: true },
-    website: { type: String },
-    upiId: { type: String },
-    phNumber: { type: String },
-    password: { type: String, required: true },
+const userSchema = new mongoose.Schema({
+    phoneNumber: String,
+    otp: String,
+    otpExpiry: Date,
 });
 
-const UserModel = mongoose.model('signups', UserSchema);
+const User = mongoose.model('User', userSchema); // Changed 'signups' to 'User'
 
-module.exports = { connectDB, UserModel };
+module.exports = { connectDB, User };

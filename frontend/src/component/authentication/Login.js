@@ -2,63 +2,56 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/login`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ phoneNumber }),
       });
-  
+
+      const data = await response.json();
+
       if (response.ok) {
-        const { token, isAdmin } = await response.json();
-        localStorage.setItem('token', token);
-        
-        if (isAdmin) {
-          navigate('/admin');
+        if (data.exists) {
+          // Store phone number in sessionStorage
+          sessionStorage.setItem('phoneNumber', phoneNumber);
+          setMessage('OTP has been sent to your phone number.');
+          // Redirect to OTP verification page
+          navigate('/verify');
         } else {
-          navigate('/amount');
+          setMessage('User does not exist.');
         }
       } else {
-        alert('Invalid email or password');
+        setMessage('Failed to send OTP');
+        console.error('Failed to send OTP:', data.error);
       }
     } catch (error) {
-      console.error('Error during login:', error);
+      setMessage('Error sending OTP');
+      console.error('Error sending OTP:', error);
     }
   };
-  
 
   return (
-    <form className='mt-10 ml-10' onSubmit={handleLogin}>
-      <h2 className='mb-20 text-4xl font-bold'>Login Page</h2>
-      <div className='ml-5 flex flex-col space-y-5'>
+    <div>
+      <h2>Login with OTP</h2>
+      <form onSubmit={handleSendOtp}>
         <input
-          className='border-2 w-[250px] rounded-lg p-2'
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          type="text"
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          placeholder="Phone Number"
+          required
         />
-        <input
-          className='border-2 w-[250px] rounded-lg p-2'
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button
-          className='border w-[90px] p-2 rounded-lg text-white text-sm font-semibold bg-red-600 hover:bg-red-500'
-          type="submit"
-        >
-          Login
-        </button>
-      </div>
-    </form>
+        <button type="submit">Send OTP</button>
+      </form>
+      {message && <p style={{ color: 'red' }}>{message}</p>}
+    </div>
   );
 }
 
