@@ -179,26 +179,21 @@ const Admin = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update withdrawal status');
       }
-
+  
       const data = await response.json();
       console.log('Withdrawal status updated:', data.withdrawal);
 
-      // Update state to reflect the status change
-      setWithdrawals(prevWithdrawals =>
-        prevWithdrawals.map(withdrawal =>
-          withdrawal._id === withdrawalId
-            ? { ...withdrawal, status: 'completed' }
-            : withdrawal
-        )
-      );
+      const updatedWithdrawalsResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin-withdrawals`);
+    const updatedWithdrawalsData = await updatedWithdrawalsResponse.json();
+    setWithdrawals(updatedWithdrawalsData.withdrawals || []);
+      // Optionally refresh the list of withdrawals or update the UI
     } catch (error) {
       console.error('Error updating withdrawal status:', error);
-      setError(error.message || 'Failed to update withdrawal status');
     }
   };
   

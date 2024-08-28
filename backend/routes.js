@@ -403,17 +403,16 @@ router.post('/api/payment-webhook', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Transaction not found' });
     }
 
-    const oldAmount = transaction.amount;
 
     // Update the transaction status
-    transaction.status = status;
+    UserTransaction.status = status;
+    await UserTransaction.updateOne(
+      { 'transactions.transactionId': transactionId },
+      { $set: { 'transactions.$.status': 'completed' } }
+    );
+    
 
-    if (status === 'completed') {
-      // Update totalAmount by adding the transaction amount
-      userTransaction.totalAmount += oldAmount;
-    }
 
-    await userTransaction.save();
 
     // Find the payment in the UsedUpiId collection and update the status
     const payment = await UsedUpiId.findOne({ transactionId });
@@ -599,6 +598,17 @@ router.post('/api/withdrawals', async (req, res) => {
 
     await withdrawal.save();
     res.status(201).json({ message: 'Withdrawal request created successfully', withdrawal });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get('/api/withdrawals/phoneNumber', async (req, res) => {
+  const { phoneNumber } = req.query;
+
+  try {
+    const withdrawals = await Withdrawal.find({ phoneNumber }).sort({ createdAt: -1 }); // Sort by latest
+    res.json({ withdrawals });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
