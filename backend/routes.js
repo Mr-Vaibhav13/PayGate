@@ -38,6 +38,52 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
 
+router.get('/api/user-total-amount', async (req, res) => {
+  try {
+    const userPhoneNumber = req.query.phoneNumber;
+    if (!userPhoneNumber) {
+      return res.status(400).json({ message: 'Phone number is required' });
+    }
+
+    const userTransaction = await UserTransaction.findOne({ phoneNumber: userPhoneNumber });
+
+    if (!userTransaction) {
+      return res.status(404).json({ totalAmount: 0 });
+    }
+
+    res.json({ totalAmount: userTransaction.totalAmount });
+  } catch (error) {
+    console.error('Error fetching total amount:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+
+router.post('/api/update-total-amount', async (req, res) => {
+  const { phoneNumber, totalAmount } = req.body;
+
+  if (!phoneNumber || totalAmount === undefined) {
+    return res.status(400).json({ message: 'Phone number and total amount are required' });
+  }
+
+  try {
+    const userTransaction = await UserTransaction.findOneAndUpdate(
+      { phoneNumber },
+      { $set: { totalAmount } },
+      { new: true }
+    );
+
+    if (!userTransaction) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ success: true, totalAmount: userTransaction.totalAmount });
+  } catch (error) {
+    console.error('Error updating total amount:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
 
 
 // Admin middleware

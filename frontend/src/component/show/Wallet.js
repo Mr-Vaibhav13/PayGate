@@ -8,9 +8,73 @@ const Wallet = () => {
   const [upiId, setUpiId] = useState('');
   const [modalError, setModalError] = useState('');
   const [withdrawals, setWithdrawals] = useState([]);
+  const [totalAmount, setTotalAmount] = useState(0);
+  
+  useEffect(() => {
+    const fetchTotalAmount = async () => {
+      try {
+        const storedPhoneNumber = sessionStorage.getItem('phoneNumber');
+        if (!storedPhoneNumber) {
+          throw new Error('Phone number not found in session storage');
+        }
+        
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user-total-amount?phoneNumber=${encodeURIComponent(storedPhoneNumber)}`);
+        const data = await response.json();
+        setTotalAmount(data.totalAmount || 0);
+      } catch (error) {
+        console.error('Error fetching total amount:', error);
+      }
+    };
+
+    fetchTotalAmount();
+  }, []);
+
+  const updateTotalAmount = async (newAmount) => {
+    try {
+      const storedPhoneNumber = sessionStorage.getItem('phoneNumber');
+      if (!storedPhoneNumber) {
+        throw new Error('Phone number not found in session storage');
+      }
+
+      // Update frontend state
+      setTotalAmount(newAmount);
+
+      // Send update to backend
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/update-total-amount`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ phoneNumber: storedPhoneNumber, totalAmount: newAmount })
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error('Failed to update total amount');
+      }
+    } catch (error) {
+      console.error('Error updating total amount:', error);
+    }
+  };
+
+  // Example function to handle changes
+  const handleAmountChange = (e) => {
+    const totalAmountTrans = transactions
+    .filter(transaction => transaction.status === 'completed')
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+    const totalAmountWith = withdrawals
+    .filter(withdrawal => withdrawal.status === 'completed')
+    .reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
+
+    const totalAmount = totalAmountTrans-totalAmountWith;
+    updateTotalAmount(totalAmount);
+  };
 
 
 
+  
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
@@ -110,7 +174,7 @@ const Wallet = () => {
     .filter(withdrawal => withdrawal.status === 'completed')
     .reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
 
-    const totalAmount = totalAmountTrans-totalAmountWith;
+    const totalAmountVal = totalAmountTrans-totalAmountWith;
   
 
     const handleConfirm = async () => {
@@ -172,6 +236,10 @@ const Wallet = () => {
         setModalError(error.message || 'Failed to create withdrawal request');
       }
     };
+
+    useEffect(() => {
+      handleAmountChange(); // Call handleAmountChange after transactions and withdrawals are fetched
+    }, [transactions, withdrawals]);
   
 
     return (
@@ -181,7 +249,7 @@ const Wallet = () => {
           <div className="mb-9 flex justify-between">
               <p className="font-bold">BALANCE: <span className='text-4xl text-green-600 ml-4'>₹{totalAmount}</span></p>
               
-              {totalAmount > 0 && (
+              {totalAmountVal > 0 && (
                   <button
                       className='p-2 bg-green-500 hover:bg-green-400 px-5 text-white rounded-lg'
                       onClick={() => setIsModalOpen(true)}
