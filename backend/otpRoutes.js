@@ -4,6 +4,9 @@ const crypto = require('crypto');
 const axios = require('axios');
 const { User } = require('./databases/db'); // Ensure this path is correct
 
+const authenticatedUsers = new Map();
+
+
 function generateOtp() {
   return crypto.randomInt(100000, 999999).toString();
 }
@@ -23,7 +26,6 @@ async function sendOtpSms(phoneNumber, otp) {
 }
 
 
-// Request OTP
 // Request OTP
 router.post('/request-otp', async (req, res) => {
     const { phoneNumber } = req.body;
@@ -63,6 +65,9 @@ router.post('/verify-otp', async (req, res) => {
     user.otp = null;
     user.otpExpiry = null;
     await user.save();
+    
+    authenticatedUsers.set(phoneNumber, true);
+
     res.json({ message: 'OTP verified' });
   } else {
     res.status(400).json({ error: 'Invalid OTP' });

@@ -11,6 +11,7 @@ const UTRModel = require("./databases/utrDB");
 const { UsedUpiId } = require('./databases/usedUpiDB');
 const crypto = require('crypto');
 const multer = require('multer');
+const UserTransaction = require('./databases/transactions.DB');
 
 
 
@@ -140,21 +141,69 @@ router.get('/api/upi-qr', async (req, res) => {
 // Endpoint to store payment info
 router.post('/api/store-payment-info', async (req, res) => {
   try {
-      const { amount, upiId, transactionId } = req.body; // Include transactionId
-      
-      // Validate request data
+      const { amount, upiId, transactionId, phoneNumber } = req.body;
+
       if (!amount || !upiId || !transactionId) {
           return res.status(400).json({ error: 'Amount, UPI ID, and Transaction ID are required' });
       }
       
       const usedUpiId = new UsedUpiId({ amount, upiId, transactionId }); // Save transactionId
       await usedUpiId.save();
-      res.status(201).json({ message: 'Payment info stored successfully' });
+      
+      
+      // Find or create a user transaction entry
+      let userTransaction = await UserTransaction.findOne({ phoneNumber });
+
+      if (!userTransaction) {
+          userTransaction = new UserTransaction({
+              phoneNumber,
+              totalAmount: amount,
+              transactions: [{
+                  upiId,
+                  amount,
+                  status: 'pending',
+                  createdAt: new Date()
+              }]
+          });
+      } else {
+          userTransaction.totalAmount += amount;
+          userTransaction.transactions.push({
+              upiId,
+              amount,
+              status: 'pending',
+              createdAt: new Date()
+          });
+      }
+
+      await userTransaction.save();
+      res.status(200).json({ message: 'Transaction stored successfully' });
   } catch (error) {
       console.error('Error storing payment info:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Failed to store transaction' });
   }
 });
+
+
+// Route to get user transactions
+router.get('/api/user-transactions', async (req, res) => {
+  try {
+    const phoneNumber = req.query.phoneNumber;
+
+    const userTransaction = await UserTransaction.findOne({ phoneNumber });
+
+    if (!userTransaction) {
+      return res.status(404).json({ message: 'No transactions found' });
+    }
+
+    res.status(200).json({ transactions: userTransaction.transactions });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
+});
+
+
+
 
 // Get list of all used UPI IDs
 router.get('/api/used-upi-ids', async (req, res) => {
@@ -294,6 +343,16 @@ router.post('/api/payment-webhook', async (req, res) => {
 
     const { transactionId, status } = req.body;
 
+    const updatedTransaction = await UserTransaction.updateOne(
+      { 'transactions.transactionId': transactionId },
+      { $set: { 'transactions.$.status': status } }
+    );
+
+    if (updatedTransaction.nModified === 0) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+    
+
     // Find the payment in the database
     const payment = await UsedUpiId.findOne({ transactionId });
     if (payment) {
@@ -368,6 +427,48 @@ router.get('/api/utr-details', async (req, res) => {
       res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
+
+
+
+router.post('/api/transactions', async (req, res) => {
+  const { phoneNumber, upiId, amount, status } = req.body;
+
+  try {
+    
+      console.log('Received data:', req.body);
+      let userTransaction = await UserTransaction.findOne({ phoneNumber });
+
+      if (!userTransaction) {
+        console.log('No existing document, creating new one...');
+
+          // Create a new document if it doesn't exist
+          userTransaction = new UserTransaction({
+              phoneNumber,
+              totalAmount: status === 'completed' ? amount : 0,
+              transactions: [{ upiId, amount, status }],
+          });
+      } else {
+          // Update the existing document
+          console.log('Updating existing document...');
+          userTransaction.transactions.push({ upiId, amount, status });
+          if (status === 'completed') {
+              userTransaction.totalAmount += amount;
+          }
+      }
+
+      await userTransaction.save();
+      console.log('Transaction saved:', userTransaction); // Log the saved document
+      res.status(201).json({ message: 'Transaction saved successfully' });
+  } catch (error) {
+      console.error('Error saving transaction:', error);
+      res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+
+
 
 
 

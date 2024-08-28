@@ -18,6 +18,9 @@ const UPIGateway = () => {
     const [paymentPhoto, setPaymentPhoto] = useState(null);
 
     const navigate = useNavigate(); // React Router navigate function
+    
+    const phoneNumber = sessionStorage.getItem('phoneNumber');
+
 
     // Fetch QR code and transaction ID
     const fetchQrCode = async () => {
@@ -40,7 +43,8 @@ const UPIGateway = () => {
             body: JSON.stringify({
                 amount,
                 upiId: data.upiId,
-                transactionId: data.transactionId, // Store transactionId
+                transactionId: data.transactionId,
+                phoneNumber
             }),
         });
     } catch (error) {
@@ -131,6 +135,8 @@ useEffect(() => {
 
 
 
+
+
 // ------------------- END ------------------
 
 
@@ -158,7 +164,7 @@ const handleSubmitUtrInfo = async () => {
         throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
       }
 
-      navigate("/trans")
+      navigate("/amount");
     } catch (error) {
       console.error('Error submitting UTR info:', error);
     }

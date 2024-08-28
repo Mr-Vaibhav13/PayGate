@@ -44,8 +44,16 @@ function Signup() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <div className='flex flex-col justify-center items-center '>
+      <div className='space-y-5'>
+        <span className='text-9xl'>🥇</span>
+        <h1 className='text-xl font-bold'>SignUp</h1>
+      </div>
+
+
+    <form className='mt-6 flex flex-col' onSubmit={handleSubmit}>
       <input
+       className=''
         type="text"
         value={phoneNumber}
         onChange={(e) => setPhoneNumber(e.target.value)}
@@ -56,6 +64,8 @@ function Signup() {
       {isSent && <p>OTP has been sent to your phone number.</p>}
       {message && <p>{message}</p>}
     </form>
+
+    </div>
   );
 }
 
