@@ -38,19 +38,38 @@ function Login() {
   };
 
   return (
+    <div className='flex items-center justify-center h-[calc(100vh-80px)] bg-gray-100'>
+      <div className='space-y-5 p-6 bg-white rounded-lg shadow-md'>
+      <div className='flex flex-col items-center'>
+          <div className='space-y-5'>
+            <span className='text-9xl'>🥇</span>
+            <h1 className='text-xl font-bold text-center'>Login</h1>
+          </div>
+          <div className='mt-7'>
+            <p className='text-center text-2xl font-bold'>Enter Registered Phone Number</p>
+            <p className='text-center text-gray-400 mt-3 text-sm font-semibold'>
+              We will send you a <span className='font-bold text-gray-500'>One Time Password </span>
+              on your phone number
+            </p>
+          </div>
+    
     <div>
-      <h2>Login with OTP</h2>
-      <form onSubmit={handleSendOtp}>
-        <input
+      
+      <form className='mt-6 flex flex-col' onSubmit={handleSendOtp}>
+        <input className='p-2 border-2 rounded-lg w-80 text-center'
           type="text"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
           placeholder="Phone Number"
           required
         />
-        <button type="submit">Send OTP</button>
+        <button className='bg-purple-700 hover:bg-purple-600 text-white font-semibold mt-4 p-2 rounded-lg w-80 text-center' 
+        type="submit">Send OTP</button>
       </form>
       {message && <p style={{ color: 'red' }}>{message}</p>}
+    </div>
+    </div>
+    </div>
     </div>
   );
 }

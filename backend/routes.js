@@ -159,6 +159,7 @@ router.post('/api/store-payment-info', async (req, res) => {
               phoneNumber,
               totalAmount: amount,
               transactions: [{
+                transactionId,
                   upiId,
                   amount,
                   status: 'pending',
@@ -168,6 +169,7 @@ router.post('/api/store-payment-info', async (req, res) => {
       } else {
           userTransaction.totalAmount += amount;
           userTransaction.transactions.push({
+            transactionId,
               upiId,
               amount,
               status: 'pending',
@@ -332,6 +334,7 @@ const validateWebhook = (req) => {
 
 
 // Webhook endpoint for payment status updates-----------------
+// Example of broadcasting the update in the backend
 router.post('/api/payment-webhook', async (req, res) => {
   try {
     // Validate the webhook request
@@ -370,6 +373,7 @@ router.post('/api/payment-webhook', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 
 

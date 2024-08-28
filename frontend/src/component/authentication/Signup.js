@@ -44,29 +44,44 @@ function Signup() {
   };
 
   return (
-    <div className='flex flex-col justify-center items-center '>
-      <div className='space-y-5'>
-        <span className='text-9xl'>🥇</span>
-        <h1 className='text-xl font-bold'>SignUp</h1>
+    <div className='flex items-center justify-center h-[calc(100vh-80px)] bg-gray-100'>
+      <div className='space-y-5 p-6 bg-white rounded-lg shadow-md'>
+        <div className='flex flex-col items-center'>
+          <div className='space-y-5'>
+            <span className='text-9xl'>🥇</span>
+            <h1 className='text-xl font-bold text-center'>SignUp</h1>
+          </div>
+
+          <div className='mt-7'>
+            <p className='text-center text-2xl font-bold'>Enter Your Phone Number</p>
+            <p className='text-center text-gray-400 mt-3 text-sm font-semibold'>
+              We will send you a <span className='font-bold text-gray-500'>One Time Password </span>
+              on your phone number
+            </p>
+          </div>
+
+          <form className='mt-6 flex flex-col' onSubmit={handleSubmit}>
+            <input
+              className='p-2 border-2 rounded-lg w-80 text-center'
+              type="text"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="Enter Phone Number"
+              required
+            />
+            <button 
+              type="submit"
+              className='bg-purple-700 hover:bg-purple-600 text-white font-semibold mt-4 p-2 rounded-lg w-80 text-center'
+            >
+              Get OTP
+            </button>
+            {isSent && <p className='mt-2 text-green-500'>OTP has been sent to your phone number.</p>}
+            {message && <p className='mt-2 text-red-500'>{message}</p>}
+          </form>
+        </div>
       </div>
-
-
-    <form className='mt-6 flex flex-col' onSubmit={handleSubmit}>
-      <input
-       className=''
-        type="text"
-        value={phoneNumber}
-        onChange={(e) => setPhoneNumber(e.target.value)}
-        placeholder="Phone Number"
-        required
-      />
-      <button type="submit">Send OTP</button>
-      {isSent && <p>OTP has been sent to your phone number.</p>}
-      {message && <p>{message}</p>}
-    </form>
-
     </div>
   );
-}
+};
 
 export default Signup;

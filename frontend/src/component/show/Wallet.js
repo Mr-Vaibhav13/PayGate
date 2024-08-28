@@ -34,29 +34,42 @@ const Wallet = () => {
   
     fetchTransactions();
   
-    // Set up event listener for transaction updates
-    const eventSource = new EventSource(`${process.env.REACT_APP_BACKEND_URL}/events`);
+  }, []);
+
+
+  useEffect(() => {
+    const eventSource = new EventSource('${process.env.REACT_APP_BACKEND_URL}/events');
+
     eventSource.onmessage = (event) => {
-      const { transactionId, status } = JSON.parse(event.data);
-  
-      setTransactions(prevState =>
-        prevState.map(transaction =>
-          transaction.transactionId === transactionId
-            ? { ...transaction, status }
+      const updatedTransaction = JSON.parse(event.data);
+
+      // Update the transactions state with the received data
+      setTransactions((prevTransactions) =>
+        prevTransactions.map((transaction) =>
+          transaction.transactionId === updatedTransaction.transactionId
+            ? { ...transaction, status: updatedTransaction.status }
             : transaction
         )
       );
     };
-  
+
     return () => {
       eventSource.close();
     };
   }, []);
   
+  
+  const totalAmount = transactions
+  .filter(transaction => transaction.status === 'completed')
+  .reduce((sum, transaction) => sum + transaction.amount, 0);
+  
   return (
     <div className="p-5">
       <h1 className="text-2xl font-bold mb-4">Your Transactions</h1>
       {error && <p className="text-red-500">{error}</p>}
+      <div className="mb-4">
+        <p className="text-lg font-semibold">Total Amount: ₹ {totalAmount}</p>
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">

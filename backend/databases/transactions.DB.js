@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const transactionSchema = new mongoose.Schema({
+    transactionId: { type: String },
     upiId: String,
     amount: Number,
     status: { type: String, enum: ['completed', 'pending', 'failed'] },
