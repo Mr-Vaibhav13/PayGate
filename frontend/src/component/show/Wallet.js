@@ -39,6 +39,9 @@ const Wallet = () => {
     fetchTransactions();
   }, []);
 
+
+  
+
   useEffect(() => {
     const eventSource = new EventSource(`${process.env.REACT_APP_BACKEND_URL}/events`);
 
@@ -67,52 +70,53 @@ const Wallet = () => {
   };
 
   const totalAmount = transactions
-    .filter(transaction => transaction.status === 'completed' && transaction.flag === 'deposit')
+    .filter(transaction => transaction.status === 'completed')
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
-  const handleConfirm = async () => {
-    const totalAmountCheck = transactions
-      .filter(transaction => transaction.status === 'completed' && transaction.flag === 'deposit')
-      .reduce((sum, transaction) => sum + transaction.amount, 0);
-
-    if (parseFloat(withdrawAmount) > totalAmountCheck) {
-      setModalError('Entered amount exceeds available balance.');
-      return;
-    }
-
-    if (withdrawAmount === '' || upiId === '') {
-      setModalError("Fill all the entries");
-      return;
-    }
-
-    try {
-      const phoneNumber = sessionStorage.getItem('phoneNumber');
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/withdraw`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ phoneNumber, amount: withdrawAmount, upiId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to process withdrawal');
+    const handleConfirm = async () => {
+      try {
+        // Validation
+        if (!withdrawAmount || !upiId) {
+          setModalError('Please fill in all fields.');
+          return;
+        }
+        
+        const phoneNumber = sessionStorage.getItem('phoneNumber');
+        if (!phoneNumber) {
+          setModalError('Phone number not found.');
+          return;
+        }
+    
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/withdrawals`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            phoneNumber,
+            amount: parseFloat(withdrawAmount),
+            upiId
+          })
+        });
+    
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to create withdrawal request');
+        }
+    
+        // Clear modal
+        setIsModalOpen(false);
+        setWithdrawAmount('');
+        setUpiId('');
+        setModalError('');
+    
+        // Refresh transactions or handle other UI updates if needed
+        // e.g., fetchTransactions();
+      } catch (error) {
+        setModalError(error.message || 'Failed to create withdrawal request');
       }
-
-      const data = await response.json();
-      setTransactions(prevTransactions => [...prevTransactions, data.transaction]);
-
-      setIsModalOpen(false);
-      setWithdrawAmount('');
-      setUpiId('');
-      setModalError('');
-    } catch (error) {
-      console.error('Error processing withdrawal:', error);
-      setModalError(error.message || 'Failed to process withdrawal');
-    }
-  };
+    };
   
 
   return (
@@ -145,7 +149,6 @@ const Wallet = () => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {transactions
-              .filter(transaction => transaction.flag === 'deposit')
               .map(transaction => (
               <tr key={transaction._id}>
                 <td className="px-6 py-4 whitespace-nowrap">{transaction.upiId}</td>

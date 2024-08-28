@@ -8,6 +8,10 @@ const Admin = () => {
   const [utrDetails, setUtrDetails] = useState({});
   const [showImage, setShowImage] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [error, setError] = useState(null);
+
+
 
 
   useEffect(() => {
@@ -31,13 +35,22 @@ const Admin = () => {
   }, []);
 
   useEffect(() => {
-    const fetchUsedUpiIds = async () => {
+    // Fetch used UPI IDs and withdrawals
+    const fetchUsedUpiIdsAndWithdrawals = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/used-upi-ids`);
-        const data = await response.json();
-        setUsedUpiIds(data);
-        
-        for (const entry of data) {
+        const [usedUpiIdsResponse, withdrawalsResponse] = await Promise.all([
+          fetch(`${process.env.REACT_APP_BACKEND_URL}/api/used-upi-ids`),
+          fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin-withdrawals`)
+        ]);
+
+        const usedUpiIdsData = await usedUpiIdsResponse.json();
+        const withdrawalsData = await withdrawalsResponse.json();
+
+        setUsedUpiIds(usedUpiIdsData);
+        setWithdrawals(withdrawalsData.withdrawals || []);
+
+        // Fetch UTR details for each used UPI ID
+        for (const entry of usedUpiIdsData) {
           try {
             const utrResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/utr-details?transactionId=${entry.transactionId}`);
             const utrData = await utrResponse.json();
@@ -50,13 +63,11 @@ const Admin = () => {
           }
         }
       } catch (error) {
-        console.error('Error fetching used UPI IDs:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    
-
-    fetchUsedUpiIds();
+    fetchUsedUpiIdsAndWithdrawals();
   }, []);
 
   useEffect(() => {
@@ -158,79 +169,142 @@ const Admin = () => {
     setIsModalOpen(false);
   };
 
+
+  const handleComplete = async (withdrawalId) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/withdrawals/${withdrawalId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update withdrawal status');
+      }
+
+      const data = await response.json();
+      console.log('Withdrawal status updated:', data.withdrawal);
+
+      // Update state to reflect the status change
+      setWithdrawals(prevWithdrawals =>
+        prevWithdrawals.map(withdrawal =>
+          withdrawal._id === withdrawalId
+            ? { ...withdrawal, status: 'completed' }
+            : withdrawal
+        )
+      );
+    } catch (error) {
+      console.error('Error updating withdrawal status:', error);
+      setError(error.message || 'Failed to update withdrawal status');
+    }
+  };
+  
+
+
+
   
   return (
     <div>
-      <div>
-        <h1 className='text-4xl font-bold mb-5'>Admin - UPI ID</h1>
-        <ul className='ml-5 list-disc'>
-          {upiIds && upiIds.map((upiId, index) => (
-            <li className='m-3 font-medium' key={index}>{upiId}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div className='p-5'>
-        <h1 className='my-10 text-3xl font-bold'>Used UPI IDs</h1>
-        <div className="ml-2 border-b-4 border-gray-950 pb-4 grid grid-cols-6 font-bold mb-2">
-          <div>UPI ID</div>
-          <div>Transaction ID</div>
-          <div className='ml-1'>UTR Number</div>
-          <div>Amount</div>
-          {/* <div>Date</div> */}
-          <div>Status</div>
-          <div>Actions</div> {/* New column for actions */}
-        </div>
-        {usedUpiIds.map((entry) => (
-          <div key={entry._id} className="grid grid-cols-6 gap-1 p-2 border-b border-gray-300">
-            <div>{entry.upiId}</div>
-            <div>{entry.transactionId}</div>
-            <div className='ml-4'>{utrDetails[entry.transactionId]?.utrNumber || 'Not entered by user'}</div>
-            <div>₹ {entry.amount}</div>
-            {/* <div className='text-sm'>{new Date(entry.createdAt).toLocaleString()}</div> */}
-            <div>{entry.status}</div>
-            <div>
-              <button
-                onClick={() => handleValidate(entry.transactionId)}
-                className="bg-blue-500 hover:bg-blue-400 text-white py-1 px-2 rounded">
-                Validate
-              </button>
-
-              <button
-                onClick={() => openModal(entry.transactionId)}
-                className="bg-green-500 hover:bg-green-400 text-white py-1 px-2 rounded ml-2">
-                Show Image
-              </button>
-
-            </div>
-          </div>
+    {/* UPI IDs Section */}
+    <div>
+      <h1 className="text-4xl font-bold mb-5">Admin - UPI ID</h1>
+      <ul className="ml-5 list-disc">
+        {upiIds && upiIds.map((upiId, index) => (
+          <li className="m-3 font-medium" key={index}>{upiId}</li>
         ))}
-      </div>
+      </ul>
+    </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white p-5 rounded shadow-lg relative max-w-lg mx-4">
+    {/* Used UPI IDs Section */}
+    <div className="p-5">
+      <h1 className="my-10 text-3xl font-bold">Used UPI IDs</h1>
+      <div className="ml-2 border-b-4 border-gray-950 pb-4 grid grid-cols-6 font-bold mb-2">
+        <div>UPI ID</div>
+        <div>Transaction ID</div>
+        <div className="ml-1">UTR Number</div>
+        <div>Amount</div>
+        <div>Status</div>
+        <div>Actions</div>
+      </div>
+      {usedUpiIds.map((entry) => (
+        <div key={entry._id} className="grid grid-cols-6 gap-1 p-2 border-b border-gray-300">
+          <div>{entry.upiId}</div>
+          <div>{entry.transactionId}</div>
+          <div className="ml-4">{utrDetails[entry.transactionId]?.utrNumber || 'Not entered by user'}</div>
+          <div>₹ {entry.amount}</div>
+          <div>{entry.status}</div>
+          <div>
             <button
-              onClick={closeModal}
-              className="absolute top-2 right-2 bg-red-500 hover:bg-red-400 text-white rounded-full p-2">
-              &times;
+              onClick={() => handleValidate(entry.transactionId)}
+              className="bg-blue-500 hover:bg-blue-400 text-white py-1 px-2 rounded">
+              Validate
             </button>
-            <h3 className="text-2xl font-bold">Uploaded UTR Image:</h3>
-            {showImage && (
-              <img src={`${process.env.REACT_APP_BACKEND_URL}/${showImage}`} alt="UTR Image" className="mt-3 max-w-full"/>
-            )}
+            <button
+              onClick={() => openModal(entry.transactionId)}
+              className="bg-green-500 hover:bg-green-400 text-white py-1 px-2 rounded ml-2">
+              Show Image
+            </button>
           </div>
         </div>
-      )}
-
-
-      <button
-        onClick={handleDeleteSingleUpiId}
-        className="mt-5 bg-red-500 text-white py-2 px-4 rounded">
-        Delete Bottom UPI ID
-      </button>
+      ))}
     </div>
-  );
+
+    {/* Modal for displaying UTR Image */}
+    {isModalOpen && (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50">
+        <div className="bg-white p-4 rounded shadow-lg max-w-md mx-auto">
+          <img
+            src={showImage}
+            alt="UTR Image"
+            className="w-full h-auto object-cover"
+          />
+          <button
+            onClick={closeModal}
+            className="mt-4 bg-red-500 hover:bg-red-400 text-white py-1 px-4 rounded">
+            Close
+          </button>
+        </div>
+      </div>
+    )}
+
+    {/* Withdrawals Section */}
+    <div className="p-5">
+      <h1 className="my-10 text-3xl font-bold">User Withdrawals</h1>
+      <div className="ml-2 border-b-4 border-gray-950 pb-4 grid grid-cols-5 font-bold mb-2">
+        <div>Phone Number</div>
+        <div>UPI ID</div>
+        <div>Amount</div>
+        <div>Status</div>
+        <div>Requested At</div>
+      </div>
+      {withdrawals.map((withdrawal) => (
+        <div key={withdrawal._id} className="grid grid-cols-5 gap-1 p-2 border-b border-gray-300">
+          <div>{withdrawal.phoneNumber}</div>
+          <div>{withdrawal.upiId}</div>
+          <div>₹ {withdrawal.amount}</div>
+          <div>{withdrawal.status}</div>
+          <div>{new Date(withdrawal.createdAt).toLocaleString()}</div>
+          <button
+            onClick={() => handleComplete(withdrawal._id)}
+            disabled={withdrawal.status !== 'pending'}
+          >
+            Mark as Completed
+          </button>
+        </div>
+      ))}
+    </div>
+
+    {/* Delete Button */}
+    <button
+      onClick={handleDeleteSingleUpiId}
+      className="mt-5 bg-red-500 text-white py-2 px-4 rounded">
+      Delete Bottom UPI ID
+    </button>
+  </div>
+);
 };
 
 export default Admin;

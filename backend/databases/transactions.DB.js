@@ -6,7 +6,6 @@ const transactionSchema = new mongoose.Schema({
     amount: Number,
     status: { type: String, enum: ['completed', 'pending', 'failed'] },
     createdAt: { type: Date, default: Date.now },
-    flag: { type: String, enum: ['deposit', 'withdrawal'], default: 'deposit' }
 });
 
 const userTransactionSchema = new mongoose.Schema({

@@ -12,7 +12,7 @@ const { UsedUpiId } = require('./databases/usedUpiDB');
 const crypto = require('crypto');
 const multer = require('multer');
 const UserTransaction = require('./databases/transactions.DB');
-
+const Withdrawal = require("./databases/withdrawalDB")
 
 
 
@@ -529,42 +529,126 @@ router.post('/api/transactions', async (req, res) => {
 
 
 
-router.post('/api/withdraw', async (req, res) => {
+// router.post('/api/withdraw', async (req, res) => {
+//   try {
+//     const { phoneNumber, amount, upiId } = req.body;
+
+//     // Find user transaction
+//     const userTransaction = await UserTransaction.findOne({ phoneNumber });
+//     if (!userTransaction) return res.status(404).json({ message: 'User not found' });
+    
+//     const existingWithdrawal = userTransaction.transactions.some(transaction => 
+//       transaction.flag === 'withdrawal' && transaction.status === 'pending'
+//     );
+
+//     if (existingWithdrawal) {
+//       return res.status(400).json({ message: 'A pending withdrawal request already exists.' });
+//     }
+
+
+
+//     // Validate if withdrawal amount is valid
+//     const totalAmount = userTransaction.transactions
+//       .filter(transaction => transaction.status === 'completed')
+//       .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+//     if (parseFloat(amount) > totalAmount) {
+//       return res.status(400).json({ message: 'Entered amount exceeds available balance.' });
+//     }
+
+//     // Create new transaction for withdrawal
+//     const withdrawalTransaction = {
+//       upiId,
+//       amount: parseFloat(amount),
+//       status: 'pending',
+//       createdAt: new Date(),
+//     };
+
+//     // Add withdrawal transaction to user transactions
+//     userTransaction.transactions.push(withdrawalTransaction);
+//     await userTransaction.save();
+
+//     res.status(200).json({ message: 'Withdrawal processed', transaction: withdrawalTransaction });
+//   } catch (error) {
+//     console.error('Error processing withdrawal:', error);
+//     res.status(500).json({ message: 'Internal server error' });
+//   }
+// });
+
+
+
+router.post('/api/withdrawals', async (req, res) => {
+  const { phoneNumber, amount, upiId } = req.body;
+
   try {
-    const { phoneNumber, amount, upiId } = req.body;
 
-    // Find user transaction
-    const userTransaction = await UserTransaction.findOne({ phoneNumber });
-    if (!userTransaction) return res.status(404).json({ message: 'User not found' });
+    
 
-    // Validate if withdrawal amount is valid
-    const totalAmount = userTransaction.transactions
-      .filter(transaction => transaction.status === 'completed')
-      .reduce((sum, transaction) => sum + transaction.amount, 0);
-
-    if (parseFloat(amount) > totalAmount) {
-      return res.status(400).json({ message: 'Entered amount exceeds available balance.' });
+    // Check if the user has a pending withdrawal
+    const existingWithdrawal = await Withdrawal.findOne({ phoneNumber, status: 'pending' });
+    if (existingWithdrawal) {
+      return res.status(400).json({ message: 'You have a pending withdrawal request.' });
     }
 
-    // Create new transaction for withdrawal
-    const withdrawalTransaction = {
-      upiId,
-      amount: parseFloat(amount),
-      status: 'pending',
-      createdAt: new Date(),
-      flag: 'withdrawal'
-    };
+    // Create a new withdrawal request
+    const withdrawal = new Withdrawal({
+      phoneNumber,
+      amount,
+      upiId
+    });
 
-    // Add withdrawal transaction to user transactions
-    userTransaction.transactions.push(withdrawalTransaction);
-    await userTransaction.save();
-
-    res.status(200).json({ message: 'Withdrawal processed', transaction: withdrawalTransaction });
+    await withdrawal.save();
+    res.status(201).json({ message: 'Withdrawal request created successfully', withdrawal });
   } catch (error) {
-    console.error('Error processing withdrawal:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: error.message });
   }
 });
+
+
+
+// Fetch all withdrawals
+router.get('/api/admin-withdrawals', async (req, res) => {
+  try {
+    const withdrawals = await Withdrawal.find().sort({ createdAt: -1 });
+    if (!withdrawals.length) {
+      return res.status(404).json({ message: 'No withdrawals found.' });
+    }
+    res.status(200).json({ withdrawals });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+
+
+
+router.post('/api/withdrawals/:id/complete', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+
+    
+
+    const withdrawal = await Withdrawal.findById(id);
+
+    if (!withdrawal) {
+      return res.status(404).json({ message: 'Withdrawal request not found.' });
+    }
+
+    if (withdrawal.status !== 'pending') {
+      return res.status(400).json({ message: 'Withdrawal request is not pending.' });
+    }
+
+    withdrawal.status = 'completed';
+    await withdrawal.save();
+
+    res.status(200).json({ message: 'Withdrawal status updated to completed.', withdrawal });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 
 
