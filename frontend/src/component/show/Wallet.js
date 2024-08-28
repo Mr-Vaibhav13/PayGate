@@ -59,37 +59,61 @@ const Wallet = () => {
     };
   }, []);
 
-  const handleCancle = () =>{
-    setIsModalOpen(false)
-    setWithdrawAmount('');
-    setUpiId('');
-    setModalError('');
-  }
-
-  const totalAmount = transactions
-    .filter(transaction => transaction.status === 'completed')
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-
-  
-  const handleConfirm = () => {
-    const totalAmountCheck = transactions
-    .filter(transaction => transaction.status === 'completed')
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-
-    if (parseFloat(withdrawAmount) > totalAmountCheck) {
-      setModalError('Entered amount exceeds available balance.');
-      return;
-    }
-    
-    // Proceed with withdrawal logic here
-    // Example:
-    // withdrawMoney(withdrawAmount, upiId);
-
+  const handleCancel = () => {
     setIsModalOpen(false);
     setWithdrawAmount('');
     setUpiId('');
     setModalError('');
   };
+
+  const totalAmount = transactions
+    .filter(transaction => transaction.status === 'completed' && transaction.flag === 'deposit')
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+  const handleConfirm = async () => {
+    const totalAmountCheck = transactions
+      .filter(transaction => transaction.status === 'completed' && transaction.flag === 'deposit')
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+    if (parseFloat(withdrawAmount) > totalAmountCheck) {
+      setModalError('Entered amount exceeds available balance.');
+      return;
+    }
+
+    if (withdrawAmount === '' || upiId === '') {
+      setModalError("Fill all the entries");
+      return;
+    }
+
+    try {
+      const phoneNumber = sessionStorage.getItem('phoneNumber');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/withdraw`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ phoneNumber, amount: withdrawAmount, upiId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to process withdrawal');
+      }
+
+      const data = await response.json();
+      setTransactions(prevTransactions => [...prevTransactions, data.transaction]);
+
+      setIsModalOpen(false);
+      setWithdrawAmount('');
+      setUpiId('');
+      setModalError('');
+    } catch (error) {
+      console.error('Error processing withdrawal:', error);
+      setModalError(error.message || 'Failed to process withdrawal');
+    }
+  };
+  
 
   return (
     <div className="p-5">
@@ -108,6 +132,7 @@ const Wallet = () => {
         )}
       </div>
       <div className="overflow-x-auto">
+        <h2 className="text-xl font-bold mb-4">Completed Transactions</h2>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -119,7 +144,37 @@ const Wallet = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {transactions.map((transaction) => (
+            {transactions
+              .filter(transaction => transaction.flag === 'deposit')
+              .map(transaction => (
+              <tr key={transaction._id}>
+                <td className="px-6 py-4 whitespace-nowrap">{transaction.upiId}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{transaction.transactionId}</td>
+                <td className="px-6 py-4 whitespace-nowrap">₹ {transaction.amount}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{transaction.status}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {new Date(transaction.createdAt).toLocaleDateString('en-GB')} {new Date(transaction.createdAt).toLocaleTimeString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <h2 className="text-xl font-bold mb-4 mt-8">Withdrawal Transactions</h2>
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UPI ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {transactions
+              .filter(transaction => transaction.flag === 'withdrawal')
+              .map(transaction => (
               <tr key={transaction._id}>
                 <td className="px-6 py-4 whitespace-nowrap">{transaction.upiId}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{transaction.transactionId}</td>
@@ -136,9 +191,9 @@ const Wallet = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white p-10 rounded shadow-lg relative mx-4">
+          <div className="bg-white w-[500px] p-10 rounded shadow-lg relative mx-4">
             <button
-              onClick={handleCancle}
+              onClick={handleCancel}
               className="absolute top-2 right-2 bg-red-500 hover:bg-red-400 text-white rounded-full p-2"
             >
               &times;

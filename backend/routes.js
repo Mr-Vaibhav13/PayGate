@@ -529,6 +529,43 @@ router.post('/api/transactions', async (req, res) => {
 
 
 
+router.post('/api/withdraw', async (req, res) => {
+  try {
+    const { phoneNumber, amount, upiId } = req.body;
+
+    // Find user transaction
+    const userTransaction = await UserTransaction.findOne({ phoneNumber });
+    if (!userTransaction) return res.status(404).json({ message: 'User not found' });
+
+    // Validate if withdrawal amount is valid
+    const totalAmount = userTransaction.transactions
+      .filter(transaction => transaction.status === 'completed')
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+    if (parseFloat(amount) > totalAmount) {
+      return res.status(400).json({ message: 'Entered amount exceeds available balance.' });
+    }
+
+    // Create new transaction for withdrawal
+    const withdrawalTransaction = {
+      upiId,
+      amount: parseFloat(amount),
+      status: 'pending',
+      createdAt: new Date(),
+      flag: 'withdrawal'
+    };
+
+    // Add withdrawal transaction to user transactions
+    userTransaction.transactions.push(withdrawalTransaction);
+    await userTransaction.save();
+
+    res.status(200).json({ message: 'Withdrawal processed', transaction: withdrawalTransaction });
+  } catch (error) {
+    console.error('Error processing withdrawal:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 
 
 
