@@ -157,7 +157,7 @@ router.post('/api/store-payment-info', async (req, res) => {
       if (!userTransaction) {
           userTransaction = new UserTransaction({
               phoneNumber,
-              totalAmount: amount,
+              totalAmount: 0,
               transactions: [{
                 transactionId,
                   upiId,
@@ -167,7 +167,7 @@ router.post('/api/store-payment-info', async (req, res) => {
               }]
           });
       } else {
-          userTransaction.totalAmount += amount;
+          
           userTransaction.transactions.push({
             transactionId,
               upiId,
@@ -335,35 +335,93 @@ const validateWebhook = (req) => {
 
 // Webhook endpoint for payment status updates-----------------
 // Example of broadcasting the update in the backend
+// router.post('/api/payment-webhook', async (req, res) => {
+//   try {
+//     // Validate the webhook request
+//     // console.log(req)
+//     if (!validateWebhook(req)) {
+//       return res.status(403).json({ error: 'Forbidden' });
+
+//     }
+
+//     const { transactionId, status } = req.body;
+    
+//     // const userTransaction = await UserTransaction.findOne({ 'transactions.transactionId': transactionId });
+//     // if (userTransaction) {
+//     //   const oldAmount = userTransaction.transactions.find(tx => tx.transactionId === transactionId).amount;
+//     //   userTransaction.totalAmount = userTransaction.totalAmount - oldAmount + amount;
+//     //   await userTransaction.save();
+//     // }
+
+
+
+//     const updatedTransaction = await UserTransaction.updateOne(
+//       { 'transactions.transactionId': transactionId },
+//       { $set: { 'transactions.$.status': status } }
+//     );
+
+//     if (updatedTransaction.nModified === 0) {
+//       return res.status(404).json({ success: false, message: 'Transaction not found' });
+//     }
+    
+
+//     // Find the payment in the database
+//     const payment = await UsedUpiId.findOne({ transactionId });
+//     if (payment) {
+//       payment.status = status;
+//       await payment.save();
+      
+//       broadcast(JSON.stringify({ transactionId, status }));
+      
+//       res.json({ success: true });
+//     } else {
+//       res.status(404).json({ error: 'Payment not found' });
+//     }
+//   } catch (error) {
+//     console.error('Error handling webhook:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// });
+
 router.post('/api/payment-webhook', async (req, res) => {
   try {
-    // Validate the webhook request
-    // console.log(req)
     if (!validateWebhook(req)) {
       return res.status(403).json({ error: 'Forbidden' });
-
     }
 
     const { transactionId, status } = req.body;
 
-    const updatedTransaction = await UserTransaction.updateOne(
-      { 'transactions.transactionId': transactionId },
-      { $set: { 'transactions.$.status': status } }
-    );
+    // Find the transaction first
+    const userTransaction = await UserTransaction.findOne({ 'transactions.transactionId': transactionId });
 
-    if (updatedTransaction.nModified === 0) {
+    if (!userTransaction) {
       return res.status(404).json({ success: false, message: 'Transaction not found' });
     }
-    
 
-    // Find the payment in the database
+    const transaction = userTransaction.transactions.find(tx => tx.transactionId === transactionId);
+    if (!transaction) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+
+    const oldAmount = transaction.amount;
+
+    // Update the transaction status
+    transaction.status = status;
+
+    if (status === 'completed') {
+      // Update totalAmount by adding the transaction amount
+      userTransaction.totalAmount += oldAmount;
+    }
+
+    await userTransaction.save();
+
+    // Find the payment in the UsedUpiId collection and update the status
     const payment = await UsedUpiId.findOne({ transactionId });
     if (payment) {
       payment.status = status;
       await payment.save();
-      
+
       broadcast(JSON.stringify({ transactionId, status }));
-      
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'Payment not found' });
@@ -373,7 +431,6 @@ router.post('/api/payment-webhook', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-
 
 
 
