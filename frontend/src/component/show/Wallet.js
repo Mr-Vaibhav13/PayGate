@@ -59,16 +59,16 @@ const Wallet = () => {
   };
 
   // Example function to handle changes
-  const handleAmountChange = (e) => {
+  const handleAmountChange = () => {
     const totalAmountTrans = transactions
-    .filter(transaction => transaction.status === 'completed')
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-
+      .filter(transaction => transaction.status === 'completed')
+      .reduce((sum, transaction) => sum + Number(transaction.amount), 0); // Ensure the amount is treated as a number
+  
     const totalAmountWith = withdrawals
-    .filter(withdrawal => withdrawal.status === 'completed')
-    .reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
-
-    const totalAmount = totalAmountTrans-totalAmountWith;
+      .filter(withdrawal => withdrawal.status === 'completed')
+      .reduce((sum, withdrawal) => sum + Number(withdrawal.amount), 0); // Ensure the amount is treated as a number
+  
+    const totalAmount = totalAmountTrans - totalAmountWith;
     updateTotalAmount(totalAmount);
   };
 
@@ -166,16 +166,28 @@ const Wallet = () => {
     setModalError('');
   };
 
-  const totalAmountTrans = transactions
-    .filter(transaction => transaction.status === 'completed')
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+  // const totalAmountTrans = transactions
+  //   .filter(transaction => transaction.status === 'completed')
+  //   .reduce((sum, transaction) => parseFloat(sum) + parseFloat(transaction.amount), 0);
+
+  //   const totalAmountWith = withdrawals
+  //   .filter(withdrawal => withdrawal.status === 'completed')
+  //   .reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
+
+  //   const totalAmountVal = totalAmountTrans-totalAmountWith;
+  
+  useEffect(() => {
+    const totalAmountTrans = transactions
+      .filter(transaction => transaction.status === 'completed')
+      .reduce((sum, transaction) => parseFloat(sum) + parseFloat(transaction.amount), 0);
 
     const totalAmountWith = withdrawals
-    .filter(withdrawal => withdrawal.status === 'completed')
-    .reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
+      .filter(withdrawal => withdrawal.status === 'completed')
+      .reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
 
-    const totalAmountVal = totalAmountTrans-totalAmountWith;
-  
+    const totalAmountVal = totalAmountTrans - totalAmountWith;
+    setTotalAmount(totalAmountVal);
+  }, [transactions, withdrawals])
 
     const handleConfirm = async () => {
       try {
@@ -193,7 +205,7 @@ const Wallet = () => {
 
         const totalAmountTrans = transactions
         .filter(transaction => transaction.status === 'completed')
-        .reduce((sum, transaction) => sum + transaction.amount, 0);
+        .reduce((sum, transaction) => parseFloat(sum) + parseFloat(transaction.amount), 0);
     
         const totalAmountWith = withdrawals
         .filter(withdrawal => withdrawal.status === 'completed')
@@ -202,6 +214,8 @@ const Wallet = () => {
         const totalAmountCurr = totalAmountTrans-totalAmountWith;
 
         if (parseFloat(withdrawAmount) > totalAmountCurr) {
+          // console.log(withdrawAmount)
+          // console.log(totalAmountCurr)
           setModalError('Insufficient balance.');
           return;
         }
@@ -249,7 +263,7 @@ const Wallet = () => {
           <div className="mb-9 flex justify-between">
               <p className="font-bold">BALANCE: <span className='text-4xl text-green-600 ml-4'>₹{totalAmount}</span></p>
               
-              {totalAmountVal > 0 && (
+              {totalAmount > 0 && (
                   <button
                       className='p-2 bg-green-500 hover:bg-green-400 px-5 text-white rounded-lg'
                       onClick={() => setIsModalOpen(true)}

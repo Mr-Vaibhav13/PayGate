@@ -159,10 +159,28 @@ const Admin = () => {
   };
   
 
+  // const openModal = (transactionId) => {
+  //   // setShowImage(utrDetails[transactionId]?.utrImage);
+  //   // setIsModalOpen(true);
+  //   const image = utrDetails[transactionId]?.utrImage;
+  // console.log('Image data:', image); // Check if this logs the expected image data
+  // setShowImage(image);
+  // console.log('Image data:', showImage);
+  // setIsModalOpen(true);
+  // };
+
   const openModal = (transactionId) => {
-    setShowImage(utrDetails[transactionId]?.utrImage);
+    const image = utrDetails[transactionId]?.utrImage;
+    console.log('Fetched Image data:', image); // Logs the fetched image data
+  
+    const baseUrl = `${process.env.REACT_APP_BACKEND_URL}/`; // Adjust base URL
+    const imageUrl = `${baseUrl}${image}`; // Construct full URL if necessary
+    setShowImage(imageUrl);
+  
+    // No need to log immediately here; use useEffect to check the updated state
     setIsModalOpen(true);
   };
+  
 
   const closeModal = () => {
     setShowImage(null);

@@ -13,6 +13,10 @@ const crypto = require('crypto');
 const multer = require('multer');
 const UserTransaction = require('./databases/transactions.DB');
 const Withdrawal = require("./databases/withdrawalDB")
+const { encrypt } = require('./security/encryption');
+const { decrypt } = require('./security/encryption');
+
+
 
 
 
@@ -50,8 +54,9 @@ router.get('/api/user-total-amount', async (req, res) => {
     if (!userTransaction) {
       return res.status(404).json({ totalAmount: 0 });
     }
+    const decryptedAmount = decrypt(userTransaction.totalAmount);
 
-    res.json({ totalAmount: userTransaction.totalAmount });
+    res.json({ totalAmount: parseFloat(decryptedAmount) });
   } catch (error) {
     console.error('Error fetching total amount:', error);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -67,9 +72,11 @@ router.post('/api/update-total-amount', async (req, res) => {
   }
 
   try {
+    const encryptedAmount = encrypt(totalAmount);
+
     const userTransaction = await UserTransaction.findOneAndUpdate(
       { phoneNumber },
-      { $set: { totalAmount } },
+      { $set: { totalAmount: encryptedAmount } },
       { new: true }
     );
 
@@ -84,6 +91,46 @@ router.post('/api/update-total-amount', async (req, res) => {
   }
 });
 
+
+
+
+
+
+
+
+
+router.get('/api/user-transactions', async (req, res) => {
+  const phoneNumber = req.query.phoneNumber;
+
+  try {
+    const encryptedPhoneNumber = encrypt(phoneNumber);
+    const userTransaction = await UserTransaction.findOne({ phoneNumber: encryptedPhoneNumber });
+
+    if (!userTransaction) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Decrypt the fields
+    const decryptedPhoneNumber = decrypt(userTransaction.phoneNumber);
+    const decryptedTotalAmount = decrypt(userTransaction.totalAmount);
+    
+    const decryptedTransactions = userTransaction.transactions.map(tx => ({
+      transactionId: decrypt(tx.transactionId), // Decrypt transactionId
+      upiId: decrypt(tx.upiId),                // Decrypt upiId
+      amount: decrypt(tx.amount),
+      status: decrypt(tx.status),
+      createdAt: tx.createdAt,
+    }));
+
+    res.json({
+      phoneNumber: decryptedPhoneNumber,
+      totalAmount: decryptedTotalAmount,
+      transactions: decryptedTransactions,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 
 // Admin middleware
@@ -192,35 +239,40 @@ router.post('/api/store-payment-info', async (req, res) => {
       if (!amount || !upiId || !transactionId) {
           return res.status(400).json({ error: 'Amount, UPI ID, and Transaction ID are required' });
       }
+
+      const encryptedPhoneNumber = encrypt(phoneNumber);
+    const encryptedAmount = encrypt(amount.toString());
+    const encryptedUpiId = encrypt(upiId);
+    const encryptedTransactionId = encrypt(transactionId);
       
       const usedUpiId = new UsedUpiId({ amount, upiId, transactionId }); // Save transactionId
       await usedUpiId.save();
       
       
       // Find or create a user transaction entry
-      let userTransaction = await UserTransaction.findOne({ phoneNumber });
+      let userTransaction = await UserTransaction.findOne({ phoneNumber: encryptedPhoneNumber });
 
+      
       if (!userTransaction) {
-          userTransaction = new UserTransaction({
-              phoneNumber,
-              totalAmount: 0,
-              transactions: [{
-                transactionId,
-                  upiId,
-                  amount,
-                  status: 'pending',
-                  createdAt: new Date()
-              }]
-          });
+        userTransaction = new UserTransaction({
+          phoneNumber: encryptedPhoneNumber,
+          totalAmount: encrypt('0'),  // Initial totalAmount (not encrypted here for calculation ease)
+          transactions: [{
+            transactionId: encryptedTransactionId,
+            upiId: encryptedUpiId,
+            amount: encryptedAmount,
+            status: encrypt('pending'),
+            createdAt: new Date()
+          }]
+        });
       } else {
-          
-          userTransaction.transactions.push({
-            transactionId,
-              upiId,
-              amount,
-              status: 'pending',
-              createdAt: new Date()
-          });
+        userTransaction.transactions.push({
+          transactionId: encryptedTransactionId,
+          upiId: encryptedUpiId,
+          amount: encryptedAmount,
+          status: encrypt('pending'),
+          createdAt: new Date()
+        });
       }
 
       await userTransaction.save();
@@ -233,22 +285,24 @@ router.post('/api/store-payment-info', async (req, res) => {
 
 
 // Route to get user transactions
-router.get('/api/user-transactions', async (req, res) => {
-  try {
-    const phoneNumber = req.query.phoneNumber;
+// router.get('/api/user-transactions', async (req, res) => {
+//   try {
+//     const phoneNumber = req.query.phoneNumber;
 
-    const userTransaction = await UserTransaction.findOne({ phoneNumber });
+//     const userTransaction = await UserTransaction.findOne({ phoneNumber });
 
-    if (!userTransaction) {
-      return res.status(404).json({ message: 'No transactions found' });
-    }
+//     if (!userTransaction) {
+//       return res.status(404).json({ message: 'No transactions found' });
+//     }
 
-    res.status(200).json({ transactions: userTransaction.transactions });
-  } catch (error) {
-    console.error('Error fetching transactions:', error);
-    res.status(500).json({ error: 'Failed to fetch transactions' });
-  }
-});
+//     res.status(200).json({ transactions: userTransaction.transactions });
+//   } catch (error) {
+//     console.error('Error fetching transactions:', error);
+//     res.status(500).json({ error: 'Failed to fetch transactions' });
+//   }
+// });
+
+
 
 
 
@@ -325,7 +379,6 @@ let clients = [];
 // ------------ SSE(server-sent events) and WEB HOOK ----------------
 
 const broadcast = (message) => {
-  // console.log(clients[0].res)
   clients.forEach((client) => {
     client.res.write(`data: ${message}\n\n`);
   });
@@ -436,15 +489,16 @@ router.post('/api/payment-webhook', async (req, res) => {
     }
 
     const { transactionId, status } = req.body;
+    const decryptedTransactionId = encrypt(transactionId);
 
     // Find the transaction first
-    const userTransaction = await UserTransaction.findOne({ 'transactions.transactionId': transactionId });
+    const userTransaction = await UserTransaction.findOne({ 'transactions.transactionId': decryptedTransactionId });
 
     if (!userTransaction) {
       return res.status(404).json({ success: false, message: 'Transaction not found' });
     }
 
-    const transaction = userTransaction.transactions.find(tx => tx.transactionId === transactionId);
+    const transaction = userTransaction.transactions.find(tx => tx.transactionId === decryptedTransactionId);
     if (!transaction) {
       return res.status(404).json({ success: false, message: 'Transaction not found' });
     }
@@ -453,8 +507,8 @@ router.post('/api/payment-webhook', async (req, res) => {
     // Update the transaction status
     UserTransaction.status = status;
     await UserTransaction.updateOne(
-      { 'transactions.transactionId': transactionId },
-      { $set: { 'transactions.$.status': 'completed' } }
+      { 'transactions.transactionId': decryptedTransactionId },
+      { $set: { 'transactions.$.status': encrypt('completed') } }
     );
     
 
