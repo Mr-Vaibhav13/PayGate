@@ -104,33 +104,34 @@ const Wallet = () => {
     };
 
     const fetchWithdrawals = async () => {
-      try {
-        const phoneNumber = sessionStorage.getItem('phoneNumber');
-        if (!phoneNumber) {
-          setError('No phone number found');
-          return;
-        }
+  try {
+    const phoneNumber = sessionStorage.getItem('phoneNumber');
+    if (!phoneNumber) {
+      setError('No phone number found');
+      return;
+    }
 
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/withdrawals/phoneNumber?phoneNumber=${phoneNumber}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to fetch withdrawals');
-        }
-
-        const data = await response.json();
-        setWithdrawals(data.withdrawals);
-        
-
-      } catch (error) {
-        console.error('Error fetching withdrawals:', error);
-        setError(error.message || 'Failed to fetch withdrawals');
+    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/withdrawals/phoneNumber?phoneNumber=${encodeURIComponent(phoneNumber)}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
-    };
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('API Error:', errorData);
+      throw new Error(errorData.message || 'Failed to fetch withdrawals');
+    }
+
+    const data = await response.json();
+    setWithdrawals(data.withdrawals);
+    
+  } catch (error) {
+    console.error('Error fetching withdrawals:', error);
+    setError(error.message || 'Failed to fetch withdrawals');
+  }
+};
+
 
     fetchTransactions();
     fetchWithdrawals();
@@ -166,15 +167,6 @@ const Wallet = () => {
     setModalError('');
   };
 
-  // const totalAmountTrans = transactions
-  //   .filter(transaction => transaction.status === 'completed')
-  //   .reduce((sum, transaction) => parseFloat(sum) + parseFloat(transaction.amount), 0);
-
-  //   const totalAmountWith = withdrawals
-  //   .filter(withdrawal => withdrawal.status === 'completed')
-  //   .reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
-
-  //   const totalAmountVal = totalAmountTrans-totalAmountWith;
   
   useEffect(() => {
     const totalAmountTrans = transactions
@@ -183,7 +175,7 @@ const Wallet = () => {
 
     const totalAmountWith = withdrawals
       .filter(withdrawal => withdrawal.status === 'completed')
-      .reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
+      .reduce((sum, withdrawal) => parseFloat(sum) + parseFloat(withdrawal.amount), 0);
 
     const totalAmountVal = totalAmountTrans - totalAmountWith;
     setTotalAmount(totalAmountVal);
@@ -209,9 +201,12 @@ const Wallet = () => {
     
         const totalAmountWith = withdrawals
         .filter(withdrawal => withdrawal.status === 'completed')
-        .reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
+        .reduce((sum, withdrawal) => parseFloat(sum) + parseFloat(withdrawal.amount), 0);
     
         const totalAmountCurr = totalAmountTrans-totalAmountWith;
+        console.log(totalAmountCurr)
+        console.log(totalAmountTrans)
+        console.log(totalAmountWith)
 
         if (parseFloat(withdrawAmount) > totalAmountCurr) {
           // console.log(withdrawAmount)
@@ -305,7 +300,6 @@ const Wallet = () => {
                   <thead className="bg-gray-50">
                       <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UPI ID</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction ID</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
@@ -315,7 +309,6 @@ const Wallet = () => {
                       {withdrawals.map(withdrawal => (
                           <tr key={withdrawal._id}>
                               <td className="px-6 py-4 whitespace-nowrap">{withdrawal.upiId}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">{withdrawal.transactionId}</td>
                               <td className="px-6 py-4 whitespace-nowrap">₹ {withdrawal.amount}</td>
                               <td className="px-6 py-4 whitespace-nowrap">{withdrawal.status}</td>
                               <td className="px-6 py-4 whitespace-nowrap">

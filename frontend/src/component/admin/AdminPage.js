@@ -282,40 +282,43 @@ const Admin = () => {
         </div>
       </div>
     )}
-
-    {/* Withdrawals Section */}
-    <div className="p-5">
-      <h1 className="my-10 text-3xl font-bold">User Withdrawals</h1>
-      <div className="ml-2 border-b-4 border-gray-950 pb-4 grid grid-cols-5 font-bold mb-2">
-        <div>Phone Number</div>
-        <div>UPI ID</div>
-        <div>Amount</div>
-        <div>Status</div>
-        <div>Requested At</div>
-      </div>
-      {withdrawals.map((withdrawal) => (
-        <div key={withdrawal._id} className="grid grid-cols-5 gap-1 p-2 border-b border-gray-300">
-          <div>{withdrawal.phoneNumber}</div>
-          <div>{withdrawal.upiId}</div>
-          <div>₹ {withdrawal.amount}</div>
-          <div>{withdrawal.status}</div>
-          <div>{new Date(withdrawal.createdAt).toLocaleString()}</div>
-          <button
-            onClick={() => handleComplete(withdrawal._id)}
-            disabled={withdrawal.status !== 'pending'}
-          >
-            Mark as Completed
-          </button>
-        </div>
-      ))}
-    </div>
-
     {/* Delete Button */}
     <button
       onClick={handleDeleteSingleUpiId}
       className="mt-5 bg-red-500 text-white py-2 px-4 rounded">
       Delete Bottom UPI ID
     </button>
+
+    {/* Withdrawals Section */}
+    <div className="p-5">
+      <h1 className="my-10 text-3xl font-bold">User Withdrawals</h1>
+      <div className="ml-2 border-b-4 border-gray-950 pb-4 grid grid-cols-6 font-bold mb-2">
+        <div>Phone Number</div>
+        <div>UPI ID</div>
+        <div>Amount</div>
+        <div>Status</div>
+        <div>RequestedAt</div>
+        <div>Actions</div>
+      </div>
+      {withdrawals.map((withdrawal) => (
+        <div key={withdrawal._id} className="grid grid-cols-6 gap-1 p-2 border-b border-gray-300">
+          <div>{withdrawal.phoneNumber}</div>
+          <div>{withdrawal.upiId}</div>
+          <div>₹ {withdrawal.amount}</div>
+          <div>{withdrawal.status}</div>
+          <div>{new Date(withdrawal.createdAt).toLocaleString()}</div>
+          <button className='cursor-pointer	bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg'
+            onClick={() => handleComplete(withdrawal._id)}
+            disabled={withdrawal.status !== 'pending'}
+          >
+            Mark Completed
+          </button>
+        </div>
+        
+      ))}
+    </div>
+
+    
   </div>
 );
 };

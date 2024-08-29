@@ -37,7 +37,7 @@ const upload = multer({
 
 
 
-const JWT_SECRET = process.env.JWT_SECRET;
+// const JWT_SECRET = process.env.JWT_SECRET;
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
@@ -48,8 +48,9 @@ router.get('/api/user-total-amount', async (req, res) => {
     if (!userPhoneNumber) {
       return res.status(400).json({ message: 'Phone number is required' });
     }
-
-    const userTransaction = await UserTransaction.findOne({ phoneNumber: userPhoneNumber });
+    
+    const encryptedPhoneNumber = encrypt(userPhoneNumber);
+    const userTransaction = await UserTransaction.findOne({ phoneNumber: encryptedPhoneNumber });
 
     if (!userTransaction) {
       return res.status(404).json({ totalAmount: 0 });
@@ -73,9 +74,11 @@ router.post('/api/update-total-amount', async (req, res) => {
 
   try {
     const encryptedAmount = encrypt(totalAmount);
+    const encryptedPhoneNumber = encrypt(phoneNumber);
+
 
     const userTransaction = await UserTransaction.findOneAndUpdate(
-      { phoneNumber },
+      { phoneNumber: encryptedPhoneNumber },
       { $set: { totalAmount: encryptedAmount } },
       { new: true }
     );
@@ -540,6 +543,7 @@ router.post('/api/payment-webhook', async (req, res) => {
 
 
 
+
 router.post('/api/store-utr-info', upload.single('utrImage'), async (req, res) => {
   try {
     const { transactionId, utrNumber } = req.body;
@@ -628,68 +632,16 @@ router.post('/api/transactions', async (req, res) => {
 
 
 
-// router.post('/api/withdraw', async (req, res) => {
-//   try {
-//     const { phoneNumber, amount, upiId } = req.body;
-
-//     // Find user transaction
-//     const userTransaction = await UserTransaction.findOne({ phoneNumber });
-//     if (!userTransaction) return res.status(404).json({ message: 'User not found' });
-    
-//     const existingWithdrawal = userTransaction.transactions.some(transaction => 
-//       transaction.flag === 'withdrawal' && transaction.status === 'pending'
-//     );
-
-//     if (existingWithdrawal) {
-//       return res.status(400).json({ message: 'A pending withdrawal request already exists.' });
-//     }
-
-
-
-//     // Validate if withdrawal amount is valid
-//     const totalAmount = userTransaction.transactions
-//       .filter(transaction => transaction.status === 'completed')
-//       .reduce((sum, transaction) => sum + transaction.amount, 0);
-
-//     if (parseFloat(amount) > totalAmount) {
-//       return res.status(400).json({ message: 'Entered amount exceeds available balance.' });
-//     }
-
-//     // Create new transaction for withdrawal
-//     const withdrawalTransaction = {
-//       upiId,
-//       amount: parseFloat(amount),
-//       status: 'pending',
-//       createdAt: new Date(),
-//     };
-
-//     // Add withdrawal transaction to user transactions
-//     userTransaction.transactions.push(withdrawalTransaction);
-//     await userTransaction.save();
-
-//     res.status(200).json({ message: 'Withdrawal processed', transaction: withdrawalTransaction });
-//   } catch (error) {
-//     console.error('Error processing withdrawal:', error);
-//     res.status(500).json({ message: 'Internal server error' });
-//   }
-// });
-
 
 
 router.post('/api/withdrawals', async (req, res) => {
   const { phoneNumber, amount, upiId } = req.body;
-
   try {
-
-    
-
-    // Check if the user has a pending withdrawal
     const existingWithdrawal = await Withdrawal.findOne({ phoneNumber, status: 'pending' });
     if (existingWithdrawal) {
       return res.status(400).json({ message: 'You have a pending withdrawal request.' });
     }
 
-    // Create a new withdrawal request
     const withdrawal = new Withdrawal({
       phoneNumber,
       amount,
@@ -703,26 +655,33 @@ router.post('/api/withdrawals', async (req, res) => {
   }
 });
 
+
 router.get('/api/withdrawals/phoneNumber', async (req, res) => {
   const { phoneNumber } = req.query;
 
+  if (!phoneNumber) {
+    console.error('Phone number missing in query');
+    return res.status(400).json({ message: 'Phone number is required' });
+  }
+
+  // console.log('Received phone number:', phoneNumber);
+
   try {
-    const withdrawals = await Withdrawal.find({ phoneNumber }).sort({ createdAt: -1 }); // Sort by latest
+    const withdrawals = await Withdrawal.find({ phoneNumber }).sort({ createdAt: -1 });
+    withdrawals.forEach(withdrawal => withdrawal.decrypt());
     res.json({ withdrawals });
   } catch (error) {
+    console.error('Error fetching withdrawals:', error);
     res.status(500).json({ message: error.message });
   }
 });
-
 
 
 // Fetch all withdrawals
 router.get('/api/admin-withdrawals', async (req, res) => {
   try {
     const withdrawals = await Withdrawal.find().sort({ createdAt: -1 });
-    if (!withdrawals.length) {
-      return res.status(404).json({ message: 'No withdrawals found.' });
-    }
+    withdrawals.forEach(withdrawal => withdrawal.decrypt());
     res.status(200).json({ withdrawals });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -733,13 +692,33 @@ router.get('/api/admin-withdrawals', async (req, res) => {
 
 
 
+// router.post('/api/withdrawals/:id/complete', async (req, res) => {
+//   const { id } = req.params;
+
+//   try {
+//     const withdrawal = await Withdrawal.findById(id);
+//     if (!withdrawal) {
+//       return res.status(404).json({ message: 'Withdrawal request not found.' });
+//     }
+
+//     if (withdrawal.status !== 'pending') {
+//       return res.status(400).json({ message: 'Withdrawal request is not pending.' });
+//     }
+
+//     withdrawal.status = 'completed';
+//     await withdrawal.save();
+
+//     res.status(200).json({ message: 'Withdrawal status updated to completed.', withdrawal });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// });
+
+
 router.post('/api/withdrawals/:id/complete', async (req, res) => {
   const { id } = req.params;
 
   try {
-
-    
-
     const withdrawal = await Withdrawal.findById(id);
 
     if (!withdrawal) {
@@ -750,15 +729,32 @@ router.post('/api/withdrawals/:id/complete', async (req, res) => {
       return res.status(400).json({ message: 'Withdrawal request is not pending.' });
     }
 
+    // Update status to completed
     withdrawal.status = 'completed';
+
+    // Decrypt fields for processing if necessary
+    withdrawal.decrypt();
+
     await withdrawal.save();
 
-    res.status(200).json({ message: 'Withdrawal status updated to completed.', withdrawal });
+    // Optionally, fetch and decrypt all withdrawals for admin
+    const withdrawals = await Withdrawal.find().sort({ createdAt: -1 });
+    const decryptedWithdrawals = withdrawals.map(withdrawal => {
+      try {
+        withdrawal.decrypt();
+        return withdrawal.toObject();
+      } catch (decryptError) {
+        console.error('Decryption error:', decryptError);
+        return null;
+      }
+    }).filter(withdrawal => withdrawal !== null);
+
+    res.status(200).json({ message: 'Withdrawal status updated to completed.', withdrawal: decryptedWithdrawals.find(w => w._id.toString() === id) });
   } catch (error) {
+    console.error('Error updating withdrawal status:', error);
     res.status(500).json({ message: error.message });
   }
 });
-
 
 
 
