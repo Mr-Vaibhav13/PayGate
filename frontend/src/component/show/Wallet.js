@@ -204,9 +204,7 @@ const Wallet = () => {
         .reduce((sum, withdrawal) => parseFloat(sum) + parseFloat(withdrawal.amount), 0);
     
         const totalAmountCurr = totalAmountTrans-totalAmountWith;
-        console.log(totalAmountCurr)
-        console.log(totalAmountTrans)
-        console.log(totalAmountWith)
+        
 
         if (parseFloat(withdrawAmount) > totalAmountCurr) {
           // console.log(withdrawAmount)
@@ -238,9 +236,14 @@ const Wallet = () => {
         setWithdrawAmount('');
         setUpiId('');
         setModalError('');
+
+        // setWithdrawals(prevWithdrawals => [
+        //   ...prevWithdrawals,
+        //   data.withdrawal // Assuming `data.withdrawal` contains the new withdrawal object
+        // ]);
     
-        // Refresh transactions or handle other UI updates if needed
-        // e.g., fetchTransactions();
+        // handleAmountChange();
+
       } catch (error) {
         setModalError(error.message || 'Failed to create withdrawal request');
       }
