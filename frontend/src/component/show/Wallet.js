@@ -43,8 +43,7 @@ const Wallet = () => {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/update-total-amount`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ phoneNumber: storedPhoneNumber, totalAmount: newAmount })
       });
@@ -84,11 +83,7 @@ const Wallet = () => {
           return;
         }
 
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user-transactions?phoneNumber=${phoneNumber}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user-transactions?phoneNumber=${phoneNumber}`);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -111,11 +106,7 @@ const Wallet = () => {
       return;
     }
 
-    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/withdrawals/phoneNumber?phoneNumber=${encodeURIComponent(phoneNumber)}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
+    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/withdrawals/phoneNumber?phoneNumber=${encodeURIComponent(phoneNumber)}`);
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -207,8 +198,6 @@ const Wallet = () => {
         
 
         if (parseFloat(withdrawAmount) > totalAmountCurr) {
-          // console.log(withdrawAmount)
-          // console.log(totalAmountCurr)
           setModalError('Insufficient balance.');
           return;
         }
@@ -217,7 +206,6 @@ const Wallet = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify({
             phoneNumber,
@@ -231,18 +219,11 @@ const Wallet = () => {
           throw new Error(data.message || 'Failed to create withdrawal request');
         }
     
-        // Clear modal
         setIsModalOpen(false);
         setWithdrawAmount('');
         setUpiId('');
         setModalError('');
 
-        // setWithdrawals(prevWithdrawals => [
-        //   ...prevWithdrawals,
-        //   data.withdrawal // Assuming `data.withdrawal` contains the new withdrawal object
-        // ]);
-    
-        // handleAmountChange();
 
       } catch (error) {
         setModalError(error.message || 'Failed to create withdrawal request');

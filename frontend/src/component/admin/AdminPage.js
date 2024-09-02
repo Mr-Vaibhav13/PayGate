@@ -9,7 +9,7 @@ const Admin = () => {
   const [showImage, setShowImage] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [withdrawals, setWithdrawals] = useState([]);
-  const [error, setError] = useState(null);
+  // const [error, setError] = useState(null);
 
 
 
@@ -17,11 +17,7 @@ const Admin = () => {
   useEffect(() => {
     const fetchUpiIds = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/admin/upi-ids`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/admin/upi-ids`);
         const data = await response.json();
         setUpiIds(data.upiIds);
       } catch (error) {
@@ -102,7 +98,6 @@ const Admin = () => {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({ upiIds: [singleUpiId] })
       });
@@ -159,16 +154,6 @@ const Admin = () => {
   };
   
 
-  // const openModal = (transactionId) => {
-  //   // setShowImage(utrDetails[transactionId]?.utrImage);
-  //   // setIsModalOpen(true);
-  //   const image = utrDetails[transactionId]?.utrImage;
-  // console.log('Image data:', image); // Check if this logs the expected image data
-  // setShowImage(image);
-  // console.log('Image data:', showImage);
-  // setIsModalOpen(true);
-  // };
-
   const openModal = (transactionId) => {
     const image = utrDetails[transactionId]?.utrImage;
     console.log('Fetched Image data:', image); // Logs the fetched image data
@@ -194,8 +179,7 @@ const Admin = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          }
       });
   
       if (!response.ok) {

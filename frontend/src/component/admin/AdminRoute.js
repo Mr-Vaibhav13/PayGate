@@ -7,11 +7,7 @@ const useAdminAuth = () => {
   useEffect(() => {
     const checkAdmin = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/admin`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/admin`);
 
         if (response.ok) {
           setIsAdmin(true);
