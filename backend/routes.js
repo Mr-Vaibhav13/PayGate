@@ -234,6 +234,31 @@ router.get('/api/upi-qr', async (req, res) => {
   }
 });
 
+router.get('/api/get-payment-info/:transactionId', async (req, res) => {
+  try {
+      const { transactionId } = req.params;
+
+      // Find the document with the provided transactionId
+      const paymentInfo = await UsedUpiId.findOne({ transactionId });
+
+      if (!paymentInfo) {
+          return res.status(404).json({ message: 'Transaction not found' });
+      }
+
+      // Send the amount and UPI ID back to the client
+      res.json({
+          upiId: paymentInfo.upiId,
+          amount: paymentInfo.amount,
+      });
+  } catch (error) {
+      console.error('Error fetching payment info:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
+
+
 // Endpoint to store payment info
 router.post('/api/store-payment-info', async (req, res) => {
   try {

@@ -1,15 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const UPIAmount = () => {
     const [amount, setAmount] = useState('');
-    const [paymentLink, setPaymentLink] = useState('');
-    
-    useEffect(() => {
-        if (paymentLink) {
-            // Perform redirection when paymentLink state changes
-            window.location.href = paymentLink;
-        }
-    }, [paymentLink]);
+    const navigate = useNavigate();
 
     const randomUpiBtn = async () => {
         if (!amount) {
@@ -22,10 +16,13 @@ const UPIAmount = () => {
             const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upi-qr?amount=${encodeURIComponent(amount)}`);
             const data = await response.json();
 
-            if (response.ok) {
-                // Set the payment link to the returned URL
-                setPaymentLink(`${window.location.origin}/gate?upiLink=${encodeURIComponent(data.qrCodeUrl)}`);
-                localStorage.setItem('amount', amount);
+            if (response.ok && data.qrCodeUrl) {
+                // Navigate to the UPIGateway component with the necessary data
+                navigate('/gate', {
+                    state: {
+                        amount
+                    }
+                });
             } else {
                 console.error('Error generating payment link:', data.error);
             }
@@ -33,7 +30,6 @@ const UPIAmount = () => {
             console.error('Error generating payment link:', error);
         }
     };
-
 
     return (
         <div className='flex-col p-2'>
@@ -50,12 +46,13 @@ const UPIAmount = () => {
             </div>
 
             <div>
-                <button onClick={randomUpiBtn}
-                className='bg-slate-300 hover:bg-slate-50 p-2 rounded-lg'
-                >Pay Now</button>
+                <button 
+                    onClick={randomUpiBtn}
+                    className='bg-slate-300 hover:bg-slate-50 p-2 rounded-lg'
+                >
+                    Pay Now
+                </button>
             </div>
-
-            
         </div>
     );
 };

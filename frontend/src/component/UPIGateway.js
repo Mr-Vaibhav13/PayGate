@@ -2,10 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MobileIntent from './UPI_Intent/MobileIntent';
 import PcIntent from './UPI_Intent/PcIntent';
+import { useLocation } from 'react-router-dom';
+
+
 
 const UPIGateway = () => {
-    const amount = localStorage.getItem("amount");
-    const vpa = localStorage.getItem("vpa");
+    
+    const location = useLocation();
+    const { amount } = location.state || {};
 
     const [qrCodeUrl, setQrCodeUrl] = useState('');
     const [upiId, setUpiId] = useState('');
@@ -13,7 +17,8 @@ const UPIGateway = () => {
     const [timeLeft, setTimeLeft] = useState(300);
     const [transactionId, setTransactionId] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('pending');
-
+    
+    
     const [utrNumber, setUtrNumber] = useState('');
     const [paymentPhoto, setPaymentPhoto] = useState(null);
 
@@ -55,18 +60,18 @@ const UPIGateway = () => {
     
     // Fetch QR code when amount and vpa are available
     useEffect(() => {
-        if (amount && vpa) {
+        if (amount) {
             fetchQrCode();
         }
 
         const intervalId = setInterval(() => {
-            if (amount && vpa) {
+            if (amount) {
                 fetchQrCode();
             }
         }, 300000);
 
         return () => clearInterval(intervalId);
-    }, [amount, vpa]);
+    }, [amount]);
 
 
     // Check if the device is mobile
@@ -202,7 +207,7 @@ const handleSubmitUtrInfo = async () => {
 
                 {!isMobile ? 
                     <PcIntent /> :
-                    <MobileIntent vpa={vpa} amount={amount} />
+                    <MobileIntent vpa={upiId} amount={amount} />
                 }
 
             </div>
