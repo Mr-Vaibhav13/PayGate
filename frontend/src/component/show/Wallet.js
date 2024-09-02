@@ -91,7 +91,10 @@ const Wallet = () => {
         }
 
         const data = await response.json();
-        setTransactions(data.transactions);
+
+        const sortedTransactions = data.transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        setTransactions(sortedTransactions);
       } catch (error) {
         console.error('Error fetching transactions:', error);
         setError(error.message || 'Failed to fetch transactions');
@@ -218,6 +221,19 @@ const Wallet = () => {
         if (!response.ok) {
           throw new Error(data.message || 'Failed to create withdrawal request');
         }
+
+        const newWithdrawal = {
+          _id: data.withdrawal._id, // Assuming the response includes the new withdrawal data
+          upiId,
+          amount: parseFloat(withdrawAmount),
+          status: 'pending', // Assuming the status is pending initially
+          createdAt: new Date().toISOString(), // Or use the actual timestamp from the response if available
+        };
+    
+        // Update the withdrawals and total amount states
+        setWithdrawals((prevWithdrawals) => [newWithdrawal, ...prevWithdrawals]);
+        // setTotalAmount((prevTotalAmount) => prevTotalAmount - parseFloat(withdrawAmount));
+    
     
         setIsModalOpen(false);
         setWithdrawAmount('');

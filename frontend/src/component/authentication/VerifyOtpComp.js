@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 function VerifyOtpComp() {
   const [otp, setOtp] = useState('');
   const [message, setMessage] = useState('');
-  const [timeLeft, setTimeLeft] = useState(300);
+  const [timeLeft, setTimeLeft] = useState(150);
   const navigate = useNavigate();
 
   // Retrieve phone number from sessionStorage
