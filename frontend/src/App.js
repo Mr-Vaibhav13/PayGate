@@ -6,7 +6,7 @@ import Login from './component/authentication/Login';
 import Signup from './component/authentication/Signup';
 import Navbar from './component/authentication/Navbar'; 
 import AdminPage from './component/admin/AdminPage';
-import AdminRoute from './component/admin/AdminRoute';
+// import AdminRoute from './component/admin/AdminRoute';
 import Transactions from './component/show/Transactions';
 import Success from './component/show/Success';
 import VerifyOtpComp from './component/authentication/VerifyOtpComp';
