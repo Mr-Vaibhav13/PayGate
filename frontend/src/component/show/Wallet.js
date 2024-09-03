@@ -138,6 +138,23 @@ const Wallet = () => {
     const eventSource = new EventSource(`${process.env.REACT_APP_BACKEND_URL}/events`);
 
     eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+  
+      if (data.updatedWithdrawal) {
+        // Update the withdrawal status in the state
+
+        if (data.updatedWithdrawal.status === 'completed') {
+          alert('Your withdrawal has been completed!');
+        }
+        setWithdrawals((prevWithdrawals) =>
+          prevWithdrawals.map((withdrawal) =>
+            withdrawal._id === data.updatedWithdrawal._id
+              ? { ...withdrawal, status: data.updatedWithdrawal.status }
+              : withdrawal
+          )
+        );
+      }
+
       const updatedTransaction = JSON.parse(event.data);
 
       setTransactions((prevTransactions) =>
@@ -147,6 +164,8 @@ const Wallet = () => {
             : transaction
         )
       );
+  
+      // Handle other types of updates if necessary
     };
 
     return () => {

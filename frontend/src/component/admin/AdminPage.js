@@ -68,19 +68,27 @@ const Admin = () => {
 
   useEffect(() => {
     const eventSource = new EventSource(`${process.env.REACT_APP_BACKEND_URL}/events`);
-  
+
     eventSource.onmessage = (event) => {
-      const { transactionId, status } = JSON.parse(event.data);
-  
-      setUsedUpiIds(prevState =>
-        prevState.map(entry =>
-          entry.transactionId === transactionId
-            ? { ...entry, status }
-            : entry
-        )
-      );
+      const { transactionId, status, newWithdrawal } = JSON.parse(event.data);
+
+      if (transactionId) {
+        // Update UPI ID status
+        setUsedUpiIds(prevState =>
+          prevState.map(entry =>
+            entry.transactionId === transactionId
+              ? { ...entry, status }
+              : entry
+          )
+        );
+      }
+
+      if (newWithdrawal) {
+        // Add the new withdrawal to the state
+        setWithdrawals(prevState => [newWithdrawal, ...prevState]);
+      }
     };
-  
+
     return () => {
       eventSource.close();
     };
@@ -188,7 +196,7 @@ const Admin = () => {
       }
   
       const data = await response.json();
-      console.log('Withdrawal status updated:', data.withdrawal);
+      alert(`Withdraw status updated to completed`);
 
       const updatedWithdrawalsResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin-withdrawals`);
     const updatedWithdrawalsData = await updatedWithdrawalsResponse.json();
@@ -198,6 +206,10 @@ const Admin = () => {
       console.error('Error updating withdrawal status:', error);
     }
   };
+
+  const handleLoad = () =>{
+    window.location.reload();
+  }
   
 
 
@@ -207,7 +219,10 @@ const Admin = () => {
     <div>
     {/* UPI IDs Section */}
     <div>
+      <div className='flex justify-between'>
       <h1 className="text-4xl font-bold mb-5">Admin - UPI ID</h1>
+      <button className='mr-10 text-lg bg-yellow-600 hover:bg-yellow-500 rounded-lg px-5 mt-2 font-bold text-white' onClick={handleLoad}>Load page</button>
+      </div>
       <ul className="ml-5 list-disc">
         {upiIds && upiIds.map((upiId, index) => (
           <li className="m-3 font-medium" key={index}>{upiId}</li>
@@ -280,8 +295,8 @@ const Admin = () => {
         <div>Phone Number</div>
         <div>UPI ID</div>
         <div>Amount</div>
-        <div>Status</div>
         <div>RequestedAt</div>
+        <div>Status</div>
         <div>Actions</div>
       </div>
       {withdrawals.map((withdrawal) => (
@@ -289,8 +304,8 @@ const Admin = () => {
           <div>{withdrawal.phoneNumber}</div>
           <div>{withdrawal.upiId}</div>
           <div>₹ {withdrawal.amount}</div>
-          <div>{withdrawal.status}</div>
           <div>{new Date(withdrawal.createdAt).toLocaleString()}</div>
+          <div className='ml-3'>{withdrawal.status}</div>
           <button className='cursor-pointer	bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg'
             onClick={() => handleComplete(withdrawal._id)}
             disabled={withdrawal.status !== 'pending'}

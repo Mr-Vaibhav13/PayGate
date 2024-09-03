@@ -674,6 +674,15 @@ router.post('/api/withdrawals', async (req, res) => {
     });
 
     await withdrawal.save();
+
+    withdrawal.decrypt();
+
+
+    // Emit an event to notify all connected clients about the new withdrawal
+    broadcast(JSON.stringify({ newWithdrawal: withdrawal }));
+
+
+
     res.status(201).json({ message: 'Withdrawal request created successfully', withdrawal });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -773,7 +782,8 @@ router.post('/api/withdrawals/:id/complete', async (req, res) => {
         return null;
       }
     }).filter(withdrawal => withdrawal !== null);
-
+    
+    broadcast(JSON.stringify({ updatedWithdrawal: withdrawal }));
     res.status(200).json({ message: 'Withdrawal status updated to completed.', withdrawal: decryptedWithdrawals.find(w => w._id.toString() === id) });
   } catch (error) {
     console.error('Error updating withdrawal status:', error);

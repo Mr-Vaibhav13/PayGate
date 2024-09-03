@@ -12,6 +12,7 @@ import Success from './component/show/Success';
 import VerifyOtpComp from './component/authentication/VerifyOtpComp';
 import Home from './component/show/Home';
 import Wallet from './component/show/Wallet';
+import DynamicTitle from './component/show/DynamicTitle';
 const App = () => {
   const location = useLocation();
 
@@ -20,6 +21,8 @@ const App = () => {
   return (
     <div>
       {showNavbar && <Navbar />}
+      <DynamicTitle />
+
       <Routes>
         <Route path="/amount" element={<UPIAmount />} />
         <Route path="/" element={<Signup />} />
