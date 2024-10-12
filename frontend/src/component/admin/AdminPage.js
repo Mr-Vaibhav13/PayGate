@@ -9,7 +9,9 @@ const Admin = () => {
   const [showImage, setShowImage] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [withdrawals, setWithdrawals] = useState([]);
-  // const [error, setError] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [upiToEdit, setUpiToEdit] = useState(null);
+  const [newUpiId, setNewUpiId] = useState(''); // State to hold the new UPI ID
 
 
 
@@ -214,7 +216,38 @@ const Admin = () => {
 
 
 
-  
+  // Function to handle opening the edit modal
+  const openEditModal = (upiId) => {
+    setUpiToEdit(upiId);
+    setNewUpiId(upiId); // Set the current UPI ID as the initial value
+    setIsEditModalOpen(true);
+  };
+
+  // Function to handle editing UPI ID
+  const handleEditUpiId = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/admin/edit-upi-id`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ oldUpiId: upiToEdit, newUpiId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update UPI ID');
+      }
+
+      // Update the state with the new UPI ID
+      setUpiIds(prevState => prevState.map(upi => (upi === upiToEdit ? newUpiId : upi)));
+      setIsEditModalOpen(false);
+      setUpiToEdit(null);
+      setNewUpiId(''); // Clear the input field
+    } catch (error) {
+      console.error('Error editing UPI ID:', error);
+    }
+  };
+
   return (
     <div>
     {/* UPI IDs Section */}
@@ -223,9 +256,20 @@ const Admin = () => {
       <h1 className="text-4xl font-bold mb-5">Admin - UPI ID</h1>
       <button className='mr-10 text-lg bg-yellow-600 hover:bg-yellow-500 rounded-lg px-5 mt-2 font-bold text-white' onClick={handleLoad}>Load page</button>
       </div>
+
+      
+    {/* Button to open the edit modal */}
+    
       <ul className="ml-5 list-disc">
         {upiIds && upiIds.map((upiId, index) => (
-          <li className="m-3 font-medium" key={index}>{upiId}</li>
+          <li className="m-3 mr-56 font-medium flex justify-between items-center" key={index}>
+            <span>{upiId}</span>
+            <button
+              onClick={() => openEditModal(upiId)} // Open edit modal for the specific UPI ID
+              className="bg-orange-500 hover:bg-orange-400 text-white py-1 px-10 rounded">
+              Edit
+            </button>
+          </li>
         ))}
       </ul>
     </div>
@@ -317,7 +361,36 @@ const Admin = () => {
       ))}
     </div>
 
-    
+
+    {/* Edit Modal for UPI IDs */}
+    {isEditModalOpen && (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50">
+        <div className="bg-white p-4 rounded shadow-lg max-w-md mx-auto">
+          <h2 className="text-xl font-bold mb-4">Edit UPI ID</h2>
+          <div className="mb-4">
+            <span className="font-medium">Current UPI ID:</span>
+            <span className="ml-2">{upiToEdit}</span>
+          </div>
+          <input
+            type="text"
+            value={newUpiId}
+            onChange={(e) => setNewUpiId(e.target.value)} // Update the new UPI ID state
+            className="border border-gray-300 p-2 rounded mb-4 w-full"
+            placeholder="Enter new UPI ID"
+          />
+          <button
+            onClick={handleEditUpiId} // Call the edit function on click
+            className="bg-green-500 hover:bg-green-400 text-white py-1 px-4 rounded">
+            Submit
+          </button>
+          <button
+            onClick={() => setIsEditModalOpen(false)}
+            className="mt-4 bg-red-500 hover:bg-red-400 text-white py-1 px-4 rounded">
+            Close
+          </button>
+        </div>
+      </div>
+    )}
   </div>
 );
 };

@@ -722,6 +722,32 @@ router.get('/api/admin-withdrawals', async (req, res) => {
   }
 });
 
+router.put('/admin/edit-upi-id', async (req, res) => {
+  const { oldUpiId, newUpiId } = req.body;
+
+  if (!oldUpiId || !newUpiId) {
+    return res.status(400).json({ message: 'Old and new UPI IDs are required' });
+  }
+
+  try {
+    // Find the UPI ID and update it
+    const updatedUpi = await UPIModel.findOneAndUpdate(
+      { upiId: oldUpiId },
+      { upiId: newUpiId },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedUpi) {
+      return res.status(404).json({ message: 'UPI ID not found' });
+    }
+
+    res.json({ message: 'UPI ID updated successfully', updatedUpi });
+  } catch (error) {
+    console.error('Error updating UPI ID:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
 
 
 

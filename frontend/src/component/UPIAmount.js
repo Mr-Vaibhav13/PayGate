@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CgProfile } from "react-icons/cg";
 
 const UPIAmount = () => {
     const [amount, setAmount] = useState('');
     const navigate = useNavigate();
+    const phoneNumber = sessionStorage.getItem("phoneNumber");
 
     const randomUpiBtn = async () => {
         if (!amount) {
@@ -12,12 +14,10 @@ const UPIAmount = () => {
         }
 
         try {
-            // Fetch the QR code URL from the backend
             const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upi-qr?amount=${encodeURIComponent(amount)}`);
             const data = await response.json();
 
             if (response.ok && data.qrCodeUrl) {
-                // Navigate to the UPIGateway component with the necessary data
                 navigate('/gate', {
                     state: {
                         amount
@@ -32,24 +32,28 @@ const UPIAmount = () => {
     };
 
     return (
-        <div className='flex-col p-2'>
-            <h1>Pay via UPI</h1>
-            <div>
-                <label>Amount:</label>
-                <input
-                    className='w-[100%] p-2 mb-6 border border-black'
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="Enter amount"
-                />
-            </div>
+        <div className='h-screen bg-gray-800 flex flex-col items-center justify-center relative'>
+            {/* Profile icon and phone number */}
+            
+        
 
-            <div>
-                <button 
+            {/* Main content */}
+            <div className="flex flex-col items-center">
+                <h1 className="text-5xl font-bold mb-6 text-slate-200">Pay via UPI</h1>
+                <div className="mb-4">
+                    
+                    <input
+                        className='w-[100%] p-2 mb-6 border border-gray-300 rounded-lg'
+                        type="number"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        placeholder="Enter amount"
+                    />
+                </div>
+
+                <button
                     onClick={randomUpiBtn}
-                    className='bg-slate-300 hover:bg-slate-50 p-2 rounded-lg'
-                >
+                    className="px-8 py-4 bg-primary text-white rounded-lg shadow-lg hover:bg-hoverPrimary transition duration-300 font-semibold">
                     Pay Now
                 </button>
             </div>
