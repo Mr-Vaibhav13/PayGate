@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaUser } from "react-icons/fa";
+
 
 function Login() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -42,7 +44,7 @@ function Login() {
       <div className='space-y-5 p-6 bg-white rounded-lg shadow-md'>
       <div className='flex flex-col items-center'>
           <div className='space-y-5'>
-            <span className='text-9xl'>🥇</span>
+            <span className='text-9xl text-yellow-500'><FaUser /></span>
             <h1 className='text-xl font-bold text-center'>Login</h1>
           </div>
           <div className='mt-7'>
@@ -56,14 +58,14 @@ function Login() {
     <div>
       
       <form className='mt-6 flex flex-col' onSubmit={handleSendOtp}>
-        <input className='p-2 border-2 rounded-lg w-80 text-center'
+        <input className='p-2 border-2 rounded-lg w-80 text-center font-bold text-xl text-gray-600 tracking-widest'
           type="text"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
-          placeholder="Phone Number"
+          placeholder="Enter Phone Number"
           required
         />
-        <button className='bg-purple-700 hover:bg-purple-600 text-white font-semibold mt-4 p-2 rounded-lg w-80 text-center' 
+        <button className='bg-orange-600 hover:bg-orange-500 text-white font-semibold mt-4 p-2 rounded-lg w-80 text-center' 
         type="submit">Send OTP</button>
       </form>
       {message && <p style={{ color: 'red' }}>{message}</p>}

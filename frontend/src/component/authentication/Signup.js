@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaLock } from "react-icons/fa6";
+import { FaUserLock } from "react-icons/fa6";
+
+
 
 function Signup() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -48,7 +52,8 @@ function Signup() {
       <div className='space-y-5 p-6 bg-white rounded-lg shadow-md'>
         <div className='flex flex-col items-center'>
           <div className='space-y-5'>
-            <span className='text-9xl'>🥇</span>
+            {/* <span className='text-9xl'>🥇</span> */}
+            <FaUserLock className='text-9xl text-yellow-500' />
             <h1 className='text-xl font-bold text-center'>SignUp</h1>
           </div>
 
@@ -62,7 +67,7 @@ function Signup() {
 
           <form className='mt-6 flex flex-col' onSubmit={handleSubmit}>
             <input
-              className='p-2 border-2 rounded-lg w-80 text-center'
+              className='p-2 border-2 rounded-lg w-80 text-center font-bold text-xl text-gray-600 tracking-widest'
               type="text"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
@@ -71,7 +76,7 @@ function Signup() {
             />
             <button 
               type="submit"
-              className='bg-purple-700 hover:bg-purple-600 text-white font-semibold mt-4 p-2 rounded-lg w-80 text-center'
+              className='bg-primary hover:bg-orange-500 text-white font-semibold mt-4 p-2 rounded-lg w-80 text-center'
             >
               Get OTP
             </button>
